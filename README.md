@@ -1,2 +1,2 @@
-# nien-luan-backend
-nien luan nganh backend (NodeJS, Express)
+# Niên luận ngành (Backend): Website mua bán đồ cũ
+Công nghệ sử dụng: NodeJS, Express, MongoDB
