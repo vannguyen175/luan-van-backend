@@ -6,15 +6,16 @@ const bodyParser = require("body-parser");
 
 //Connect Database
 db.connect();
+
+dotenv.config();
 const port = process.env.PORT || 3001;
 
 const app = express();
-dotenv.config();
 
 app.use(bodyParser.json())
-
-
 routes(app);
+
+
 
 app.get("/", (req, res) => {
     res.send("Hello world");
