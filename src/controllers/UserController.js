@@ -29,7 +29,7 @@ const createUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body;  //destructuring
         const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
         const isCheckEmail = regexEmail.test(email);
         if (!email || !password) {
