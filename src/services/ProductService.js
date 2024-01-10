@@ -1,8 +1,9 @@
 const Product = require("../models/ProductModel");
+const Category = require("../models/CategoryModel");
 
 const createProduct = (newProduct) => {
     return new Promise(async (resolve, reject) => {
-        const { name, image, category, subCategory, price, description } =
+        const { name, image, category, price, description, subCategory } =
             newProduct;
         try {
             const createProduct = await Product.create({
@@ -21,6 +22,7 @@ const createProduct = (newProduct) => {
                 });
             }
         } catch (error) {
+            console.log(error);
             reject(error);
         }
     });

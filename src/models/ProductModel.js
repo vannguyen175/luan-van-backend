@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
     {
-        name: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
         image: { type: String, required: true },
         category: {
             type: mongoose.Schema.Types.ObjectId,
@@ -10,10 +10,10 @@ const productSchema = new mongoose.Schema(
             required: true,
         },
         subCategory: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "SubCategory",
+            type: mongoose.Schema.Types.String,
+            ref: "Category",
+            required: true,
         },
-        type: { type: String, required: true },
         price: { type: Number, required: true },
         description: { type: String },
         selled: { type: Boolean }, //tinh trang hang da duoc ban hay chua

@@ -3,9 +3,9 @@ const categoryService = require("../services/CategoryService");
 
 const createCategory = async (req, res) => {
     try {
-        const { name, subCategory } = req.body;
+        const { name } = req.body;
 
-        if (!name || !subCategory) {
+        if (!name) {
             return res.status(200).json({
                 status: "ERR",
                 message: "The input is required",
@@ -18,44 +18,58 @@ const createCategory = async (req, res) => {
     }
 };
 
-const addSubCategory = async (req, res) => {
+const updateCategory = async (req, res) => {
     try {
-        const cateID = req.params.id;
-        const data = req.body;
-        
-        if (!data) {
+        const id = req.params.id;
+        const name = req.body;
+        if (!name) {
             return res.status(200).json({
-                status: "ERR",
-                message: "The input is required",
+                status: "ERROR",
+                message: "name field is required",
             });
         }
-        const response = await categoryService.addSubCategory(cateID, data);
+        const response = await categoryService.updateCategory(id, name);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
     }
 };
 
-const deleteSubCategory = async (req, res) => {
+const deleteCategory = async (req, res) => {
     try {
-        const cateID = req.params.id;
-        const data = req.body;
-
-        if (!data) {
-            return res.status(200).json({
-                status: "ERR",
-                message: "The input is required",
-            });
-        }
-        const response = await categoryService.deleteSubCategory(cateID, data);
+        const id = req.params.id;
+        const response = await categoryService.deleteCategory(id);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
     }
 };
+
+const getAllCategory = async (req, res) => {
+    try {
+        const response = await categoryService.getAllCategory();
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(404).json({ message: error });
+    }
+};
+
+const detailCategory = async (req, res) => {
+    try {
+        const id = req.params.id
+        const response = await categoryService.detailCategory(id);
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(404).json({ message: error });
+    }
+};
+
+
 
 module.exports = {
     createCategory,
-    deleteSubCategory,
-    addSubCategory,
+    updateCategory,
+    deleteCategory,
+    getAllCategory,
+    detailCategory
 };

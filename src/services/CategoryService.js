@@ -1,18 +1,17 @@
 const Category = require("../models/CategoryModel.js");
+const SubCategory = require ("../models/Sub_categoryModel.js")
 
 const createCategory = (newCategory) => {
     return new Promise(async (resolve, reject) => {
-        const { name, subCategory } = newCategory;
-
+        const { name } = newCategory;
         try {
-            console.log(subCategory);
-            const createCategory = await Category.create({
-                name,
-                subCategory: subCategory,
-            });
+            const createCategory = await Category.create(
+                { name },
+                { new: true }
+            );
 
             if (createCategory) {
-                resolve({
+                return resolve({
                     status: "OK",
                     message: "SUCCESS",
                     data: createCategory,
@@ -25,43 +24,28 @@ const createCategory = (newCategory) => {
     });
 };
 
-const addSubCategory = (cateID, data) => {
+const updateCategory = (id, name) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkCategory = await Category.findOne({ _id: cateID });
+            const checkCategory = await Category.findById(id);
             if (checkCategory === null) {
-                resolve({
-                    status: "OK",
-                    message: "Category is not exists",
+                return resolve({
+                    status: "ERROR",
+                    status: "Category is not exists",
                 });
             }
-
-            const isExists = await Category.findOne({
-                _id: cateID,
-                subCategory: data.subCategory,
-            });
-            console.log(isExists);
-            if (isExists) {
-                resolve({
-                    status: "OK",
-                    message: "Sub-category is already exists",
-                });
-            }
-            const addCategory = await Category.findByIdAndUpdate(
-                cateID,
+            const updateCategory = await Category.findByIdAndUpdate(
+                id,
+                { name },
                 {
-                    $push: {
-                        subCategory: data.subCategory,
-                    },
-                },
-                { new: true }
+                    new: true,
+                }
             );
-
-            if (addCategory) {
-                resolve({
+            if (updateCategory) {
+                return resolve({
                     status: "OK",
                     message: "SUCCESS",
-                    data: addCategory,
+                    updateCategory,
                 });
             }
         } catch (error) {
@@ -71,32 +55,67 @@ const addSubCategory = (cateID, data) => {
     });
 };
 
-const deleteSubCategory = (cateID, data) => {
+const deleteCategory = (id) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkCategory = await Category.findOne({
-                _id: cateID,
-                subCategory: data.subCategory,
-            });
-            console.log(checkCategory);
+            const checkCategory = await Category.findOne({ _id: id });
             if (checkCategory === null) {
-                resolve({
-                    status: "OK",
-                    message: "Value want to delete is not exists",
+                return resolve({
+                    status: "ERROR",
+                    message: "Category is not exists",
                 });
             }
 
-            const deleteSubCategory = await Category.findByIdAndUpdate(
-                cateID,
-                { $pull: { subCategory: data.subCategory } },
-                { new: true }
-            );
+            const deleteCategory = await Category.findByIdAndDelete(id);
 
-            if (deleteSubCategory) {
-                resolve({
-                    status: "OK",
-                    message: "SUCCESS",
-                    deleteSubCategory,
+            if (deleteCategory) {
+                return resolve({
+                    status: "SUCCESS",
+                    message: "Delete category successfully",
+                });
+            }
+        } catch (error) {
+            reject(error);
+            console.log(error);
+        }
+    });
+};
+
+const getAllCategory = () => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const getAllCategory = await Category.find();
+            if (getAllCategory) {
+                return resolve({
+                    status: "SUCCESS",
+                    message: "Get all category successfully",
+                    data: getAllCategory,
+                });
+            }
+        } catch (error) {
+            reject(error);
+            console.log(error);
+        }
+    });
+};
+
+const detailCategory = (id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const detailCategory = await Category.findById(id);
+            if (detailCategory === null) {
+                return resolve({
+                    status: "SUCCESS",
+                    message: "Category is not exists",
+                });
+            }
+            if (detailCategory) {
+                const subCategories = await SubCategory.find({category: id});
+                return resolve({
+                    status: "SUCCESS",
+                    message: "Get all category successfully",
+                    category: detailCategory,
+                    subCategory: subCategories
                 });
             }
         } catch (error) {
@@ -108,6 +127,8 @@ const deleteSubCategory = (cateID, data) => {
 
 module.exports = {
     createCategory,
-    deleteSubCategory,
-    addSubCategory,
+    updateCategory,
+    deleteCategory,
+    getAllCategory,
+    detailCategory,
 };
