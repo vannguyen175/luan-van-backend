@@ -1,8 +1,11 @@
 const mongoose = require("mongoose");
+var slug = require('mongoose-slug-generator');
+mongoose.plugin(slug);
 
 const sub_categorySchema = new mongoose.Schema(
     {
         name: { type: String, required: true },
+        slug: { type: String, slug: "name" },  
         category: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",

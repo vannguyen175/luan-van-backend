@@ -4,14 +4,9 @@ const productSchema = new mongoose.Schema(
     {
         name: { type: String, required: true },
         image: { type: String, required: true },
-        category: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Category",
-            required: true,
-        },
         subCategory: {
-            type: mongoose.Schema.Types.String,
-            ref: "Category",
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Sub_category",
             required: true,
         },
         price: { type: Number, required: true },
@@ -19,7 +14,7 @@ const productSchema = new mongoose.Schema(
         selled: { type: Boolean }, //tinh trang hang da duoc ban hay chua
     },
     {
-        timestamps: true,
+        timestamps: false,
     }
 );
 const Product = mongoose.model("Product", productSchema);

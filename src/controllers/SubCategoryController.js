@@ -1,8 +1,9 @@
 const SubCategoryService = require("../services/SubCategoryService");
 
+//url: /sub-category/create
 const createSubCategory = async (req, res) => {
     try {
-        const { name, category } = req.body;
+        const { name, slug } = req.body;
         
         if (!name) {
             return res.status(200).json({
@@ -10,7 +11,7 @@ const createSubCategory = async (req, res) => {
                 message: "The input is required",
             });
         }
-        const response = await SubCategoryService.createSubCategory(name, category);
+        const response = await SubCategoryService.createSubCategory(name, slug);
         return res.status(200).json(response);
     } catch (error) {
         console.log(error);
@@ -18,9 +19,10 @@ const createSubCategory = async (req, res) => {
     }
 };
 
+//url: /sub-category/:slug
 const updateSubCategory = async (req, res) => {
     try {
-        const id = req.params.id;
+        const slug = req.params.slug;
         const name = req.body.name;
         if (!name) {
             return res.status(200).json({
@@ -28,7 +30,7 @@ const updateSubCategory = async (req, res) => {
                 message: "name field is required",
             });
         }
-        const response = await SubCategoryService.updateSubCategory(id, name);
+        const response = await SubCategoryService.updateSubCategory(slug, name);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
@@ -37,8 +39,8 @@ const updateSubCategory = async (req, res) => {
 
 const deleteSubCategory = async (req, res) => {
     try {
-        const id = req.params.id;
-        const response = await SubCategoryService.deleteSubCategory(id);
+        const slug = req.params.slug;
+        const response = await SubCategoryService.deleteSubCategory(slug);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });

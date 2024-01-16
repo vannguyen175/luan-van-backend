@@ -1,14 +1,10 @@
 const Category = require("../models/CategoryModel.js");
-const SubCategory = require ("../models/Sub_categoryModel.js")
+const SubCategory = require("../models/Sub_categoryModel.js");
 
-const createCategory = (newCategory) => {
+const createCategory = (name) => {
     return new Promise(async (resolve, reject) => {
-        const { name } = newCategory;
         try {
-            const createCategory = await Category.create(
-                { name },
-                { new: true }
-            );
+            const createCategory = await Category.create({name});
 
             if (createCategory) {
                 return resolve({
@@ -23,19 +19,19 @@ const createCategory = (newCategory) => {
         }
     });
 };
-
-const updateCategory = (id, name) => {
+//url: /category/update/:slug
+const updateCategory = (slug, name) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkCategory = await Category.findById(id);
+            const checkCategory = await Category.findOne({slug: slug});
             if (checkCategory === null) {
                 return resolve({
                     status: "ERROR",
                     status: "Category is not exists",
                 });
             }
-            const updateCategory = await Category.findByIdAndUpdate(
-                id,
+            const updateCategory = await Category.findOneAndUpdate(
+                slug,
                 { name },
                 {
                     new: true,
@@ -54,11 +50,11 @@ const updateCategory = (id, name) => {
         }
     });
 };
-
-const deleteCategory = (id) => {
+//url: /category/delete/:slug
+const deleteCategory = (slug) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkCategory = await Category.findOne({ _id: id });
+            const checkCategory = await Category.findOne({ slug: slug });
             if (checkCategory === null) {
                 return resolve({
                     status: "ERROR",
@@ -66,7 +62,7 @@ const deleteCategory = (id) => {
                 });
             }
 
-            const deleteCategory = await Category.findByIdAndDelete(id);
+            const deleteCategory = await Category.findOneAndDelete(slug);
 
             if (deleteCategory) {
                 return resolve({
@@ -81,6 +77,8 @@ const deleteCategory = (id) => {
     });
 };
 
+
+//url: /category/getAll
 const getAllCategory = () => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -99,10 +97,11 @@ const getAllCategory = () => {
     });
 };
 
-const detailCategory = (id) => {
+//url: /category/details/:slug
+const detailCategory = (slug) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const detailCategory = await Category.findById(id);
+            const detailCategory = await Category.findOne({slug: slug});
             if (detailCategory === null) {
                 return resolve({
                     status: "SUCCESS",
@@ -110,12 +109,12 @@ const detailCategory = (id) => {
                 });
             }
             if (detailCategory) {
-                const subCategories = await SubCategory.find({category: id});
+                const subCategories = await SubCategory.find({ category: detailCategory._id });
                 return resolve({
                     status: "SUCCESS",
                     message: "Get all category successfully",
                     category: detailCategory,
-                    subCategory: subCategories
+                    subCategory: subCategories,
                 });
             }
         } catch (error) {

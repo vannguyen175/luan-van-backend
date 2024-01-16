@@ -2,10 +2,12 @@ const Category = require("../models/CategoryModel");
 const SubCategory = require("../models/Sub_categoryModel");
 
 // path: /sub-category/create
-const createSubCategory = (name, category) => {
+const createSubCategory = (name, slug) => {
+    //slug: category's slug
     return new Promise(async (resolve, reject) => {
         try {
-            const checkCategory = await Category.findById(category);
+            const checkCategory = await Category.findOne({ slug });
+
             if (checkCategory === null) {
                 return resolve({
                     status: "OK",
@@ -22,7 +24,7 @@ const createSubCategory = (name, category) => {
 
             const createSubCategory = await SubCategory.create({
                 name: name,
-                category: category,
+                category: checkCategory._id,
             });
 
             if (createSubCategory) {
@@ -39,11 +41,11 @@ const createSubCategory = (name, category) => {
     });
 };
 
-// path: /sub-category/update/:id
-const updateSubCategory = (id, name) => {
+// path: /sub-category/update/:slug
+const updateSubCategory = (slug, name) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkID = await SubCategory.findById(id);
+            const checkID = await SubCategory.findOne({ slug });
             if (checkID === null) {
                 return resolve({
                     status: "ERROR",
@@ -57,8 +59,8 @@ const updateSubCategory = (id, name) => {
                     status: "Sub-category's name is already exists",
                 });
             }
-            const updateSubCategory = await SubCategory.findByIdAndUpdate(
-                id,
+            const updateSubCategory = await SubCategory.findOneAndUpdate(
+                { slug },
                 { name },
                 {
                     new: true,
@@ -78,18 +80,20 @@ const updateSubCategory = (id, name) => {
     });
 };
 
-// path: /sub-category/delete/:id
-const deleteSubCategory = (id) => {
+// path: /sub-category/delete/:slug
+const deleteSubCategory = (slug) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const checkExists = await SubCategory.findById(id);
+            const checkExists = await SubCategory.findOne({ slug });
             if (checkExists === null) {
                 resolve({
                     status: "ERROR",
                     message: "Sub-category is not exists",
                 });
             }
-            const deleteSubCategory = await SubCategory.findByIdAndDelete(id);
+            const deleteSubCategory = await SubCategory.findOneAndDelete({
+                slug,
+            });
             if (deleteSubCategory) {
                 resolve({
                     status: "SUCCESS",
@@ -102,7 +106,6 @@ const deleteSubCategory = (id) => {
         }
     });
 };
-
 
 module.exports = {
     createSubCategory,

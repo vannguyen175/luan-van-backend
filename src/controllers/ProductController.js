@@ -1,16 +1,10 @@
+const { query } = require("express");
 const ProductService = require("../services/ProductService");
 
 const createProduct = async (req, res) => {
     try {
-        const {
-            name,
-            image,
-            category,
-            subCategory,
-            price,
-            description,
-        } = req.body;
-        if (!name || !image || !category || !price || !description) {
+        const { name, image, subCategory, price, description } = req.body;
+        if (!name || !image || !subCategory || !price || !description) {
             return res.status(200).json({
                 status: "ERR",
                 message: "The input is required",
@@ -35,8 +29,18 @@ const deleteProduct = (req, res) => {
         return res.status(404).json({ message: error });
     }
 };
-const getAllProduct = (req, res) => {
+const getAllProducts = async (req, res) => {
     try {
+        const { limit, page, sort, filter } = req.query;
+        const id_subCategory = req.params.id_subCategory;
+        const response = await ProductService.getAllProducts(
+            id_subCategory,
+            Number(limit) || 10,
+            Number(page) || 1,
+            sort,
+            filter
+        );
+        return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
     }
@@ -52,6 +56,6 @@ module.exports = {
     createProduct,
     updateProduct,
     deleteProduct,
-    getAllProduct,
+    getAllProducts,
     detailProduct,
 };

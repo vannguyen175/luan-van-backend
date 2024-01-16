@@ -1,6 +1,7 @@
 const Category = require("../models/CategoryModel");
 const categoryService = require("../services/CategoryService");
 
+//url: category/create
 const createCategory = async (req, res) => {
     try {
         const { name } = req.body;
@@ -11,7 +12,7 @@ const createCategory = async (req, res) => {
                 message: "The input is required",
             });
         }
-        const response = await categoryService.createCategory(req.body);
+        const response = await categoryService.createCategory(name);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
@@ -20,7 +21,7 @@ const createCategory = async (req, res) => {
 
 const updateCategory = async (req, res) => {
     try {
-        const id = req.params.id;
+        const slug = req.params.slug;
         const name = req.body;
         if (!name) {
             return res.status(200).json({
@@ -28,7 +29,7 @@ const updateCategory = async (req, res) => {
                 message: "name field is required",
             });
         }
-        const response = await categoryService.updateCategory(id, name);
+        const response = await categoryService.updateCategory(slug, name);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
@@ -37,8 +38,8 @@ const updateCategory = async (req, res) => {
 
 const deleteCategory = async (req, res) => {
     try {
-        const id = req.params.id;
-        const response = await categoryService.deleteCategory(id);
+        const slug = req.params.slug;
+        const response = await categoryService.deleteCategory(slug);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
@@ -56,8 +57,8 @@ const getAllCategory = async (req, res) => {
 
 const detailCategory = async (req, res) => {
     try {
-        const id = req.params.id
-        const response = await categoryService.detailCategory(id);
+        const slug = req.params.slug
+        const response = await categoryService.detailCategory(slug);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
