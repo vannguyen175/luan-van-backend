@@ -7,12 +7,11 @@ const createUser = (newUser) => {
         const { name, email, password, confirmPassword, phone } = newUser;
         try {
             const checkUser = await User.findOne({ email: email });
-
             if (checkUser !== null) {
                 //email da ton tai
                 resolve({
-                    status: "OK",
-                    message: "Email already exists",
+                    status: "ERROR",
+                    message: "Địa chỉ email đã tồn tại",
                 });
             }
 
@@ -26,7 +25,7 @@ const createUser = (newUser) => {
             });
             if (createUser) {
                 resolve({
-                    status: "OK",
+                    status: "SUCCESS",
                     message: "SUCCESS",
                     data: createUser,
                 });
@@ -42,12 +41,19 @@ const loginUser = (loginUser) => {
         const { email, password } = loginUser;
         try {
             const checkUser = await User.findOne({ email: email });
-            if (checkUser === null) {
-                resolve({
-                    status: "OK",
-                    message:
-                        "The email address or password is incorrect. Please retry...",
-                });
+            if (checkUser) {
+                const isMatch = await bcrypt.compare(
+                    password,
+                    checkUser?.password
+                );
+
+                if (checkUser === null || isMatch === false) {
+                    resolve({
+                        status: "ERROR",
+                        message:
+                            "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
+                    });
+                }
             }
 
             //sau khi ktra login hop le
@@ -57,12 +63,13 @@ const loginUser = (loginUser) => {
             });
 
             resolve({
-                status: "OK",
+                status: "SUCCESS",
                 message: "SUCCESS",
                 access_token,
             });
         } catch (error) {
             reject(error);
+            console.log(error);
         }
     });
 };
@@ -73,7 +80,7 @@ const updateUser = (userID, data) => {
             const checkUser = await User.findOne({ _id: userID });
             if (checkUser === null) {
                 resolve({
-                    status: "OK",
+                    status: "ERROR",
                     message: "User is not exists",
                 });
             }
@@ -97,7 +104,7 @@ const deleteUser = (userID) => {
             const checkUser = await User.findOne({ _id: userID });
             if (checkUser === null) {
                 resolve({
-                    status: "OK",
+                    status: "ERROR",
                     message: "User is not exists",
                 });
             }
@@ -117,7 +124,7 @@ const getAllUsers = () => {
         try {
             const result = await User.find();
             resolve({
-                status: "OK",
+                status: "SUCCESS",
                 message: "SUCCESS",
                 data: result,
             });
@@ -142,4 +149,11 @@ const detailUser = (userID) => {
     });
 };
 
-module.exports = { createUser, loginUser, updateUser, deleteUser, getAllUsers, detailUser };
+module.exports = {
+    createUser,
+    loginUser,
+    updateUser,
+    deleteUser,
+    getAllUsers,
+    detailUser,
+};

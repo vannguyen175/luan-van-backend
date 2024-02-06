@@ -6,18 +6,18 @@ const createUser = async (req, res) => {
         const isCheckEmail = regexEmail.test(email);
         if (!name || !email || !password || !confirmPassword || !phone) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "The input is requied",
+                status: `ERROR`,
+                message: "Vui lòng điền đầy đủ thông tin.",
             });
         } else if (!isCheckEmail) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "Email is not valid",
+                status: `ERROR`,
+                message: "Email không hợp lệ.",
             });
         } else if (password != confirmPassword) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "Confirm password is not correct",
+                status: `ERROR`,
+                message: "Mật khẩu nhập lại không hợp lệ.",
             });
         }
         const response = await UserService.createUser(req.body);
@@ -29,18 +29,18 @@ const createUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;  //destructuring
+        const { email, password } = req.body; //destructuring
         const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
         const isCheckEmail = regexEmail.test(email);
         if (!email || !password) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "The input is requied",
+                status: `ERROR`,
+                message: "Vui lòng điền đầy đủ thông tin.",
             });
         } else if (!isCheckEmail) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "Email is not valid",
+                status: `ERROR`,
+                message: "Email không hợp lệ.",
             });
         }
         const response = await UserService.loginUser(req.body);
@@ -101,5 +101,24 @@ const detailUser = async (req, res) => {
         return res.status(404).json({ message: error });
     }
 };
+const logoutUser = async (req, res) => {
+    try {
+        localStorage.clear("access_token");
+        return res.status(200).json({
+            status: "SUCCESS",
+            message: "Logout successfully",
+        });
+    } catch (error) {
+        return res.status(404).json({ message: error });
+    }
+};
 
-module.exports = { createUser, loginUser, updateUser, deleteUser, getAllUsers, detailUser };
+module.exports = {
+    createUser,
+    loginUser,
+    updateUser,
+    deleteUser,
+    getAllUsers,
+    detailUser,
+    logoutUser,
+};
