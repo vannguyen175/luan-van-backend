@@ -41,14 +41,20 @@ const loginUser = (loginUser) => {
         const { email, password } = loginUser;
         try {
             const checkUser = await User.findOne({ email: email });
-            if (checkUser) {
+            if (checkUser === null) {
+                return resolve({
+                    status: "ERROR",
+                    message:
+                        "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
+                });
+            } else {
                 const isMatch = await bcrypt.compare(
                     password,
                     checkUser?.password
                 );
 
-                if (checkUser === null || isMatch === false) {
-                    resolve({
+                if (isMatch === false) {
+                    return resolve({
                         status: "ERROR",
                         message:
                             "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",

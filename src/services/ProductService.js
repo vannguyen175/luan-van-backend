@@ -49,8 +49,17 @@ const deleteProduct = () => {
 //url: /product/getAll/:slug      (slug: subCategory's slug)
 const getAllProducts = (slug, limit, page, sort, filter) => {
     return new Promise(async (resolve, reject) => {
-        const id_subCategory = await SubCategory.findOne({ slug });
+        const id_subCategory = await SubCategory.findOne({ slug: slug });
+        console.log("slug", id_subCategory);
+        if (id_subCategory === null) {
+            resolve({
+                status: "ERROR",
+                message: "Sub-category is not exist",
+                data: createProduct,
+            });
+        }
         const id = id_subCategory._id;
+
         try {
             const totalProducts = await Product.find({
                 subCategory: id,
