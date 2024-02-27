@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema(
         avatar: { type: String },
         rating: { type: Number, required: true, default: 0 },
     },
-    {
+    {   
+        new: true,
         timestamps: true,
     }
 );

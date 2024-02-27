@@ -1,7 +1,7 @@
 const UserService = require("../services/UserService.js");
 const createUser = async (req, res) => {
     try {
-        const { name, email, password, confirmPassword, phone } = req.body;
+        const { name, email, password, confirmPassword, phone, isAdmin, address, avatar } = req.body;
         const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
         const isCheckEmail = regexEmail.test(email);
         if (!name || !email || !password || !confirmPassword || !phone) {
@@ -50,17 +50,28 @@ const loginUser = async (req, res) => {
     }
 };
 
+
 const updateUser = async (req, res) => {
     try {
         const userID = req.params.id;
         const data = req.body;
-        if (!userID) {
+        const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+        const isCheckEmail = regexEmail.test(data.email);
+        if (!data.name || !data.email || !data.password || !data.confirmPassword || !data.phone) {
             return res.status(200).json({
-                status: `ERR`,
-                message: "The user_id is requied",
+                status: `ERROR`,
+                message: "Vui lòng điền đầy đủ thông tin.",
             });
         }
-        const response = await UserService.updateUser(userID, data);
+        if (!isCheckEmail) {
+            return res.status(200).json({
+                status: `ERROR`,
+                message: "Email không hợp lệ.",
+            });
+        } 
+            const response = await UserService.updateUser(userID, data);
+        
+
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
