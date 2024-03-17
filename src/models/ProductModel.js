@@ -1,21 +1,30 @@
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
-    {
-        name: { type: String, required: true },
-        image: { type: String, required: true },
-        subCategory: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Sub_category",
-            required: true,
-        },
-        price: { type: Number, required: true },
-        description: { type: String },
-        selled: { type: Boolean }, //tinh trang hang da duoc ban hay chua
-    },
-    {
-        timestamps: false,
-    }
+	{
+		idUser: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+			required: true,
+		}, //ID_user
+		name: { type: String, required: true },
+		sellerName: { type: String, required: true },
+		images: [],
+		subCategory: { type: String, required: true },
+		stateProduct: {
+			type: String,
+			enum: ["new", "used"],
+		},
+		info: { type: Object, required: true },
+		price: { type: Number, required: true },
+		description: { type: String },
+		address: { type: String, required: true },
+		statePost: { type: String, enum: ["waiting", "approved", "reject"], default: "waiting" },
+		selled: { type: Boolean, default: false }, //tinh trang hang da duoc ban hay chua
+	},
+	{
+		timestamps: true,
+	}
 );
 const Product = mongoose.model("Product", productSchema);
 

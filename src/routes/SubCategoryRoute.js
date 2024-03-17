@@ -4,9 +4,9 @@ const subCategoryController = require("../controllers/subCategoryController.js")
 const { authMiddleware } = require("../config/middleware/authMiddleware");
 
 router.get("/create", subCategoryController.createSubCategory);
-router.put("/update/:id", subCategoryController.updateSubCategory);
-router.delete("/delete/:id", subCategoryController.deleteSubCategory);
+router.put("/update/:slug", subCategoryController.updateSubCategory);  //slug: name subCate
+router.delete("/delete/:slug", subCategoryController.deleteSubCategory);
 //router.get("/getAll", subCategoryController.getAllSubCategory);
-// router.get("/details/:id", subCategoryController.detailSubCategory);
+router.get("/details/:slug", subCategoryController.detailSubCategory);
 
 module.exports = router;

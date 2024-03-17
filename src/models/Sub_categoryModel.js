@@ -1,20 +1,21 @@
 const mongoose = require("mongoose");
-var slug = require('mongoose-slug-generator');
+var slug = require("mongoose-slug-generator");
 mongoose.plugin(slug);
 
 const sub_categorySchema = new mongoose.Schema(
-    {
-        name: { type: String, required: true },
-        slug: { type: String, slug: "name" },  
-        category: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Category",
-            required: true,
-        },
-    },
-    {
-        timestamps: false,
-    }
+	{
+		name: { type: String, required: true },
+		slug: { type: String, slug: "name" },
+		infoSubCate: [{ type: String }],
+		category: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Category",
+			required: true,
+		},
+	},
+	{
+		timestamps: false,
+	}
 );
 
 const Sub_category = mongoose.model("Sub_category", sub_categorySchema);

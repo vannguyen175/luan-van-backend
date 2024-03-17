@@ -3,7 +3,7 @@ const SubCategoryService = require("../services/SubCategoryService");
 //url: /sub-category/create
 const createSubCategory = async (req, res) => {
     try {
-        const { name, slug } = req.body;
+        const { name, slug, info } = req.body;
         
         if (!name) {
             return res.status(200).json({
@@ -11,7 +11,7 @@ const createSubCategory = async (req, res) => {
                 message: "The input is required",
             });
         }
-        const response = await SubCategoryService.createSubCategory(name, slug);
+        const response = await SubCategoryService.createSubCategory(name, slug, info);
         return res.status(200).json(response);
     } catch (error) {
         console.log(error);
@@ -22,15 +22,16 @@ const createSubCategory = async (req, res) => {
 //url: /sub-category/:slug
 const updateSubCategory = async (req, res) => {
     try {
-        const slug = req.params.slug;
-        const name = req.body.name;
-        if (!name) {
+        const slug = req.params.slug;  //slug subCate
+        // const name = req.body.name;
+        const info = req.body.info
+        if (!info) {
             return res.status(200).json({
                 status: "ERROR",
-                message: "name field is required",
+                message: "info field is required",
             });
         }
-        const response = await SubCategoryService.updateSubCategory(slug, name);
+        const response = await SubCategoryService.updateSubCategory(slug, info);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(404).json({ message: error });
@@ -47,8 +48,19 @@ const deleteSubCategory = async (req, res) => {
     }
 };
 
+const detailSubCategory = async (req, res) => {
+    try {
+        const slug = req.params.slug
+        const response = await SubCategoryService.detailSubCategory(slug);
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(404).json({ message: error });
+    }
+};
+
 module.exports = {
     createSubCategory,
     updateSubCategory,
     deleteSubCategory,
+    detailSubCategory
 };
