@@ -154,6 +154,29 @@ const detailUser = (userID) => {
 	});
 };
 
+const infoUser = (userID) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const result = await User.findById(userID);
+			const data = {
+				name: result.name,
+				email: result.email,
+				avatar: result.avatar,
+				phone: result.phone,
+				address: result.address,
+				rating: result.rating,
+			};
+			resolve({
+				status: "OK",
+				message: "SUCCESS",
+				data,
+			});
+		} catch (error) {
+			reject(error);
+		}
+	});
+};
+
 module.exports = {
 	createUser,
 	loginUser,
@@ -161,4 +184,5 @@ module.exports = {
 	deleteUser,
 	getAllUsers,
 	detailUser,
+	infoUser,
 };

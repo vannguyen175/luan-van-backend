@@ -83,6 +83,7 @@ const deleteProduct = () => {
 };
 
 //url: /product/getAll/:slug      (slug: subCategory's slug)
+//chỉ lấy những sp đã duyệt
 const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 	return new Promise(async (resolve, reject) => {
 		const id_subCategory = await SubCategory.findOne({ slug: slug });
@@ -98,6 +99,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 		try {
 			const totalProducts = await Product.find({
 				subCategory: id,
+				statePost: "approved",
 			}).countDocuments(); //tong san pham co trong sub-category
 
 			if (sort) {
@@ -105,6 +107,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				objectSort[sort[1]] = sort[0]; //url: ...sort=asc&sort=price
 				const result = await Product.find({
 					subCategory: id,
+					statePost: "approved",
 				})
 					.limit(limit)
 					.skip(limit * (page - 1))
@@ -123,6 +126,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				const label = filter[0];
 				const result = await Product.find({
 					subCategory: id,
+					statePost: "approved",
 					[label]: { $regex: filter[1] },
 				})
 					.limit(limit)
@@ -138,11 +142,11 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				});
 			} else {
 				const result = await Product.find({
-					subCategory: id,
+					subCategory: slug,
+					statePost: "approved",
 				})
 					.limit(limit)
 					.skip(limit * (page - 1));
-
 				resolve({
 					status: "OK",
 					message: "SUCCESS",
@@ -164,8 +168,9 @@ const getAllProducts = (limit, page, filter) => {
 		try {
 			//tong san pham thỏa mãn filter (statePost: 'waiting')
 			//dùng trong Quản lý bài đăng của Admin
-
-			const totalProducts = await Product.find({ statePost: filter }).countDocuments();
+			const totalProducts = await Product.find({ statePost: filter })
+				.sort({ createdAt: "desc" })
+				.countDocuments();
 			{
 				if (filter == "all") {
 					const label = filter[0];
@@ -184,9 +189,9 @@ const getAllProducts = (limit, page, filter) => {
 				} else if (filter !== "all" && typeof filter !== "undefined") {
 					const label = filter[0];
 					const result = await Product.find({ statePost: filter })
+						.sort({ createdAt: "desc" })
 						.limit(limit)
 						.skip(limit * (page - 1));
-					console.log("result", result);
 					resolve({
 						status: "OK",
 						message: "SUCCESS",
@@ -196,7 +201,6 @@ const getAllProducts = (limit, page, filter) => {
 						totalPages: Math.ceil(totalProducts / limit),
 					});
 				} else {
-					console.log("else");
 					const result = await Product.find({})
 						.limit(limit)
 						.skip(limit * (page - 1));
@@ -217,10 +221,24 @@ const getAllProducts = (limit, page, filter) => {
 		}
 	});
 };
-const detailProduct = () => {
+const detailProduct = (id) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			const result = await Product.findById({ _id: id });
+			if (result === null) {
+				return resolve({
+					status: "ERROR",
+					message: "Product's ID is not exist",
+				});
+			} else {
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+				});
+			}
 		} catch (error) {
+			console.log(error);
 			reject(error);
 		}
 	});

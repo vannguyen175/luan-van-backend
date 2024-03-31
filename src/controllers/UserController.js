@@ -123,6 +123,17 @@ const logoutUser = async (req, res) => {
 	}
 };
 
+const infoUser = async (req, res) => {
+	try {
+		const userID = req.params.id;
+		
+		const response = await UserService.infoUser(userID);
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
+
 module.exports = {
 	createUser,
 	loginUser,
@@ -131,4 +142,5 @@ module.exports = {
 	getAllUsers,
 	detailUser,
 	logoutUser,
+	infoUser
 };

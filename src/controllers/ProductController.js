@@ -34,7 +34,7 @@ const updateProduct = async (req, res) => {
 	try {
 		const productID = req.params.id;
 		const data = req.body;
-		
+
 		const response = await ProductService.updateProduct(productID, data);
 		return res.status(200).json(response);
 	} catch (error) {
@@ -51,7 +51,7 @@ const getAllProductsBySubCate = async (req, res) => {
 	try {
 		const { limit, page, sort, filter } = req.query;
 		const slug = req.params.slug; //subCategory's slug
-		const response = await ProductService.getAllProducts(
+		const response = await ProductService.getAllProductsBySubCate(
 			slug,
 			Number(limit) || 10,
 			Number(page) || 1,
@@ -79,8 +79,11 @@ const getAllProducts = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
-const detailProduct = (req, res) => {
+const detailProduct = async (req, res) => {
 	try {
+		const { id } = req.params;
+		const response = await ProductService.detailProduct(id);
+		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });
 	}

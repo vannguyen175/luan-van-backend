@@ -9,6 +9,6 @@ router.put("/update/:id", productController.updateProduct);
 // router.delete("/delete/:id", authMiddleware, productController.deleteProduct);
 router.get("/getAll/:slug", productController.getAllProductsBySubCate);  //lấy product theo subCate
 router.post("/getAll", productController.getAllProducts); //lấy tất cả product có lọc filter
-// router.get("/details/:id", productController.detailProduct);
+router.get("/detail/:id", productController.detailProduct);
 
 module.exports = router;

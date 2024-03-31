@@ -13,5 +13,6 @@ router.put("/update/:id", userController.updateUser);
 router.delete("/delete/:id", authMiddleware, userController.deleteUser);
 router.get("/getAll", authMiddleware, userController.getAllUsers);
 router.get("/details/:id", authUserMiddleWare, userController.detailUser);
+router.get("/info/:id", userController.infoUser);
 
 module.exports = router;

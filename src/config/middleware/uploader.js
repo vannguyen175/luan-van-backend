@@ -1,5 +1,4 @@
 const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const { required } = require("nodemon/lib/config");
 const asyncHandler = require("express-async-handler");
@@ -10,23 +9,30 @@ cloudinary.config({
 	api_secret: process.env.CLOUDINARY_SECRET,
 });
 
-const uploadMultiple = asyncHandler(async (req, res, next) => {
-	try {
-		const images = req.files;
-		const imageUrls = [];
+async function handleUpload(file) {
+	const res = await cloudinary.uploader.upload(file, {
+	  resource_type: "auto",
+	});
+	return res;
+  }
 
-		for (const image of images) {
-			const result = await cloudinary.uploader.upload(image.path, {
-				resource_type: "auto",
-			});
-			imageUrls.push(result.secure_url);
-		}
-		req.body.images = imageUrls;
-		next();
-	} catch (error) {
-		console.log("uploadMultiple error", error);
-		res.status(500).send(`Internal error at: uploadMultiple.js - ${error})`);
-	}
-});
+// const uploadMultiple = asyncHandler(async (req, res, next) => {
+// 	try {
+// 		const images = req.files;
+// 		const imageUrls = [];
 
-module.exports = uploadMultiple;
+// 		for (const image of images) {
+// 			const result = await cloudinary.uploader.upload(image.path, {
+// 				resource_type: "auto",
+// 			});
+// 			imageUrls.push(result.secure_url);
+// 		}
+// 		req.body.images = imageUrls;
+// 		next();
+// 	} catch (error) {
+// 		console.log("uploadMultiple error", error);
+// 		res.status(500).send(`Internal error at: uploadMultiple.js - ${error})`);
+// 	}
+// });
+
+module.exports = handleUpload;
