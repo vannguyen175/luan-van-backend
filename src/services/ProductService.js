@@ -100,6 +100,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 			const totalProducts = await Product.find({
 				subCategory: id,
 				statePost: "approved",
+				selled: false,
 			}).countDocuments(); //tong san pham co trong sub-category
 
 			if (sort) {
@@ -108,6 +109,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				const result = await Product.find({
 					subCategory: id,
 					statePost: "approved",
+					selled: false,
 				})
 					.limit(limit)
 					.skip(limit * (page - 1))
@@ -127,6 +129,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				const result = await Product.find({
 					subCategory: id,
 					statePost: "approved",
+					selled: false,
 					[label]: { $regex: filter[1] },
 				})
 					.limit(limit)
@@ -144,6 +147,7 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 				const result = await Product.find({
 					subCategory: slug,
 					statePost: "approved",
+					selled: false,
 				})
 					.limit(limit)
 					.skip(limit * (page - 1));
@@ -163,32 +167,44 @@ const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
 	});
 };
 
-const getAllProducts = (limit, page, filter) => {
+const getAllProducts = (limit, page, filter, onSale) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			//tong san pham thỏa mãn filter (statePost: 'waiting')
 			//dùng trong Quản lý bài đăng của Admin
-			const totalProducts = await Product.find({ statePost: filter })
-				.sort({ createdAt: "desc" })
-				.countDocuments();
-			{
-				if (filter == "all") {
-					const label = filter[0];
-					const result = await Product.find({})
-						.limit(limit)
-						.skip(limit * (page - 1));
 
-					resolve({
-						status: "OK",
-						message: "SUCCESS",
-						data: result,
-						totalProducts: totalProducts,
-						pageCurrent: page,
-						totalPages: Math.ceil(totalProducts / limit),
-					});
-				} else if (filter !== "all" && typeof filter !== "undefined") {
-					const label = filter[0];
-					const result = await Product.find({ statePost: filter })
+
+			if (filter == "all") {
+				const totalProducts = await Product.find()
+					.sort({ createdAt: "desc" })
+					.countDocuments();
+
+				//const label = filter[0];
+				const filter = onSale === true ? { isSelled: true } : {};
+				const result = await Product.find(filter)
+					.limit(limit)
+					.skip(limit * (page - 1));
+
+		
+				resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+					totalProducts: totalProducts,
+					pageCurrent: page,
+					totalPages: Math.ceil(totalProducts / limit),
+				});
+			} else if (filter !== "all" && typeof filter !== "undefined") {
+				const totalProducts = await Product.find({ statePost: filter })
+					.sort({ createdAt: "desc" })
+					.countDocuments();
+				const label = filter[0];
+				if (onSale) {
+					//lấy những sp đang được bán
+					const result = await Product.find({
+						statePost: filter,
+						selled: "false",
+					})
 						.sort({ createdAt: "desc" })
 						.limit(limit)
 						.skip(limit * (page - 1));
@@ -201,10 +217,12 @@ const getAllProducts = (limit, page, filter) => {
 						totalPages: Math.ceil(totalProducts / limit),
 					});
 				} else {
-					const result = await Product.find({})
+					const result = await Product.find({
+						statePost: filter,
+					})
+						.sort({ createdAt: "desc" })
 						.limit(limit)
 						.skip(limit * (page - 1));
-
 					resolve({
 						status: "OK",
 						message: "SUCCESS",
@@ -214,6 +232,19 @@ const getAllProducts = (limit, page, filter) => {
 						totalPages: Math.ceil(totalProducts / limit),
 					});
 				}
+			} else {
+				const result = await Product.find({})
+					.limit(limit)
+					.skip(limit * (page - 1));
+
+				resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+					totalProducts: totalProducts,
+					pageCurrent: page,
+					totalPages: Math.ceil(totalProducts / limit),
+				});
 			}
 		} catch (error) {
 			reject(error);
@@ -243,6 +274,29 @@ const detailProduct = (id) => {
 		}
 	});
 };
+const getProductSeller = (id) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const sellerInfo = await User.findById(id);
+			const result = await Product.find({ sellerName: sellerInfo.name, selled: false });
+			if (result === null) {
+				return resolve({
+					status: "ERROR",
+					message: "Product's ID is not exist",
+				});
+			} else {
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+				});
+			}
+		} catch (error) {
+			console.log(error);
+			reject(error);
+		}
+	});
+};
 
 module.exports = {
 	createProduct,
@@ -251,4 +305,5 @@ module.exports = {
 	getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
+	getProductSeller,
 };

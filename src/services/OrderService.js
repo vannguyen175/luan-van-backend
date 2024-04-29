@@ -1,7 +1,9 @@
-const Order = require("../models/OrderModel");
-const Product = require("../models/ProductModel");
-
 //POST: /api/order/create
+const Product = require("../models/ProductModel");
+const Order = require("../models/OrderModel");
+const User = require("../models/UserModel");
+const { default: mongoose } = require("mongoose");
+
 const createOrder = (newOrder) => {
 	return new Promise(async (resolve, reject) => {
 		const {
@@ -14,13 +16,12 @@ const createOrder = (newOrder) => {
 			totalPrice,
 			buyer,
 			seller,
-			isPaid = false,
+			isPaid,
 			paidAt,
 		} = newOrder;
-
 		try {
 			const productDetail = await Product.findById({ _id: orderItems.idProduct });
-			const total_price = productDetail.price + shippingPrice;
+			const total_price = parseFloat(productDetail.price) + parseFloat(shippingPrice);
 			const checkOrder = await Order.findOne({
 				"orderItems.product": orderItems.idProduct,
 			});
@@ -31,6 +32,7 @@ const createOrder = (newOrder) => {
 					message: "Sản phẩm đã được bán",
 				});
 			} else {
+				await Product.findByIdAndUpdate(orderItems.idProduct, { selled: "waiting" });
 				const createOrder = await Order.create({
 					orderItems: {
 						name: productDetail.name,
@@ -62,205 +64,251 @@ const createOrder = (newOrder) => {
 	});
 };
 
-// const updateProduct = (productID, data) => {
-// 	return new Promise(async (resolve, reject) => {
-// 		try {
-// 			const checkProduct = await Product.findOne({ _id: productID });
+const getUserOrder = (stateOrder, idBuyer) => {
+	return new Promise(async (resolve, reject) => {
+		const ObjectId = require("mongodb").ObjectId;
+		try {
+			if (stateOrder) {
+				const result = await Order.find({
+					buyer: new ObjectId(idBuyer),
+					stateOrder: stateOrder,
+				});
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+				});
+			} else {
+				const result = await Order.find({ buyer: new ObjectId(idBuyer) });
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			// 			reject(error);
+		}
+	});
+};
 
-// 			if (checkProduct === null) {
-// 				reject({
-// 					status: "ERROR",
-// 					message: "Product is not exists",
-// 				});
-// 			} else {
-// 				const updateProduct = await Product.findByIdAndUpdate(productID, data, {
-// 					new: true,
-// 				});
+const getSellerOrder = (stateOrder, isSeller) => {
+	return new Promise(async (resolve, reject) => {
+		const ObjectId = require("mongodb").ObjectId;
+		try {
+			let data;
+			if (stateOrder != "all") {
+				data = await Order.find({
+					seller: new ObjectId(isSeller),
+					stateOrder: stateOrder,
+				});
+			} else {
+				data = await Order.find({ seller: new ObjectId(isSeller) });
+			}
+			let result = [];
+			if (data !== null) {
+				for (let i = 0; i < data.length; i++) {
+					let buyerInfo = await User.findById(data[i].buyer);
+					data[i].buyerName = buyerInfo.name;
+					result[i] = { ...data[i] };
+				}
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: result,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
 
-// 				return resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: updateProduct,
-// 				});
-// 			}
-// 		} catch (error) {
-// 			console.log("error", error);
-// 			reject(error);
-// 		}
-// 	});
-// };
+const updateOrder = (data, idOrder) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkOrder = await Order.findById({ _id: idOrder });
+			if (checkOrder === null) {
+				reject({
+					status: "ERROR",
+					message: "Order is not exists",
+				});
+			} else {
+				if (data.stateOrder === "approved") {
+					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
+						selled: true,
+					});
+				} else if (data.stateOrder === "reject") {
+					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
+						selled: false,
+					});
+				}
+				const updateOrder = await Order.findByIdAndUpdate(idOrder, data, {
+					new: true,
+				});
 
-// const deleteProduct = () => {
-// 	return new Promise(async (resolve, reject) => {
-// 		try {
-// 		} catch (error) {
-// 			reject(error);
-// 		}
-// 	});
-// };
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data: updateOrder,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
 
-// //url: /product/getAll/:slug      (slug: subCategory's slug)
-// //chỉ lấy những sp đã duyệt
-// const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
-// 	return new Promise(async (resolve, reject) => {
-// 		const id_subCategory = await SubCategory.findOne({ slug: slug });
-// 		if (id_subCategory === null) {
-// 			resolve({
-// 				status: "ERROR",
-// 				message: "Sub-category is not exist",
-// 				data: createProduct,
-// 			});
-// 		}
-// 		const id = id_subCategory._id;
+const analyticOrder = (idUser) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			if (Object.keys(idUser).length > 0) {
+				//thống kê cho người dùng
+				let priceBought = 0;
+				const listProductBought = await Order.find({
+					buyer: idUser,
+					stateOrder: "approved",
+				});
+				if (listProductBought) {
+					for (let index = 0; index < listProductBought.length; index++) {
+						priceBought = priceBought + listProductBought[index].totalPrice;
+					}
+				}
 
-// 		try {
-// 			const totalProducts = await Product.find({
-// 				subCategory: id,
-// 				statePost: "approved",
-// 			}).countDocuments(); //tong san pham co trong sub-category
+				const listProductWaiting = await Order.find({
+					buyer: idUser,
+					stateOrder: "waiting",
+				});
 
-// 			if (sort) {
-// 				const objectSort = {};
-// 				objectSort[sort[1]] = sort[0]; //url: ...sort=asc&sort=price
-// 				const result = await Product.find({
-// 					subCategory: id,
-// 					statePost: "approved",
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1))
-// 					.sort(objectSort);
+				let priceSelled = 0;
+				const listProductSelled = await Order.find({
+					seller: idUser,
+					stateOrder: "approved",
+				});
+				if (listProductSelled) {
+					for (let index = 0; index < listProductSelled.length; index++) {
+						priceSelled = priceSelled + listProductSelled[index].totalPrice;
+					}
+				}
+				const listOrderWaiting = await Order.find({
+					seller: idUser,
+					stateOrder: "waiting",
+				});
 
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			} else if (filter) {
-// 				//url: ...filter=name&filter=iphone44
-// 				const label = filter[0];
-// 				const result = await Product.find({
-// 					subCategory: id,
-// 					statePost: "approved",
-// 					[label]: { $regex: filter[1] },
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1));
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					listProductBought,
+					priceBought,
+					listProductSelled,
+					priceSelled,
+					listProductWaiting, //đơn hàng chờ seller duyệt của người mua
+					listOrderWaiting,
+				});
+			} else {
+				//thống kê cho quản trị viên
+				let priceSelled = 0;
+				const listOrderSelled = await Order.find({ stateOrder: "approved" });
+				const listProductSelling = await Product.find({ selled: { $ne: "true" } });
 
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			} else {
-// 				const result = await Product.find({
-// 					subCategory: slug,
-// 					statePost: "approved",
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1));
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			}
-// 		} catch (error) {
-// 			reject(error);
-// 			console.log(error);
-// 		}
-// 	});
-// };
+				const listProductWaiting = await Product.find({
+					statePost: "waiting",
+				});
 
-// const getAllProducts = (limit, page, filter) => {
-// 	return new Promise(async (resolve, reject) => {
-// 		try {
-// 			//tong san pham thỏa mãn filter (statePost: 'waiting')
-// 			//dùng trong Quản lý bài đăng của Admin
-// 			const totalProducts = await Product.find({ statePost: filter })
-// 				.sort({ createdAt: "desc" })
-// 				.countDocuments();
-// 			{
-// 				if (filter == "all") {
-// 					const label = filter[0];
-// 					const result = await Product.find({})
-// 						.limit(limit)
-// 						.skip(limit * (page - 1));
+				if (listOrderSelled) {
+					for (let index = 0; index < listOrderSelled.length; index++) {
+						priceSelled = priceSelled + listOrderSelled[index].totalPrice;
+					}
+				}
 
-// 					resolve({
-// 						status: "OK",
-// 						message: "SUCCESS",
-// 						data: result,
-// 						totalProducts: totalProducts,
-// 						pageCurrent: page,
-// 						totalPages: Math.ceil(totalProducts / limit),
-// 					});
-// 				} else if (filter !== "all" && typeof filter !== "undefined") {
-// 					const label = filter[0];
-// 					const result = await Product.find({ statePost: filter })
-// 						.sort({ createdAt: "desc" })
-// 						.limit(limit)
-// 						.skip(limit * (page - 1));
-// 					resolve({
-// 						status: "OK",
-// 						message: "SUCCESS",
-// 						data: result,
-// 						totalProducts: totalProducts,
-// 						pageCurrent: page,
-// 						totalPages: Math.ceil(totalProducts / limit),
-// 					});
-// 				} else {
-// 					const result = await Product.find({})
-// 						.limit(limit)
-// 						.skip(limit * (page - 1));
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					listOrderSelled,
+					listProductSelling,
+					listProductWaiting,
+					priceSelled,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
 
-// 					resolve({
-// 						status: "OK",
-// 						message: "SUCCESS",
-// 						data: result,
-// 						totalProducts: totalProducts,
-// 						pageCurrent: page,
-// 						totalPages: Math.ceil(totalProducts / limit),
-// 					});
-// 				}
-// 			}
-// 		} catch (error) {
-// 			reject(error);
-// 			console.log(error);
-// 		}
-// 	});
-// };
-// const detailProduct = (id) => {
-// 	return new Promise(async (resolve, reject) => {
-// 		try {
-// 			const result = await Product.findById({ _id: id });
-// 			if (result === null) {
-// 				return resolve({
-// 					status: "ERROR",
-// 					message: "Product's ID is not exist",
-// 				});
-// 			} else {
-// 				return resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 				});
-// 			}
-// 		} catch (error) {
-// 			console.log(error);
-// 			reject(error);
-// 		}
-// 	});
-// };
+const ChartAnalyticOrder = (idUser) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			if (idUser) {
+				const ObjectId = mongoose.Types.ObjectId;
+				// const result = await Order.aggregate([
+				// 	{
+				// 		$match: { buyer: new ObjectId(idUser) },
+				// 	},
+				// 	{
+				// 		$group: {
+				// 			_id: {
+				// 				year: { $year: "$updatedAt" },
+				// 				month: { $month: "$updatedAt" },
+				// 			},
+				// 			countOrders: { $sum: 1 },
+				// 		},
+				// 	},
+				// ]);
+				const result = await Order.aggregate([
+					{
+						$match: { buyer: new ObjectId(idUser) },
+					},
+				]);
+
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					result,
+				});
+			} else {
+				//thống kê cho quản trị viên
+				let priceBought = 0;
+				const listProductBought = await Order.find();
+				if (listProductBought) {
+					for (let index = 0; index < listProductBought.length; index++) {
+						priceBought = priceBought + listProductBought[index].totalPrice;
+					}
+				}
+
+				let priceSelled = 0;
+				const listProductSelled = await Order.find();
+				if (listProductSelled) {
+					for (let index = 0; index < listProductSelled.length; index++) {
+						priceSelled = priceSelled + listProductSelled[index].totalPrice;
+					}
+				}
+
+				return resolve({
+					status: "OK",
+					message: "SUCCESS",
+					listProductBought,
+					priceBought,
+					listProductSelled,
+					priceSelled,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
 
 module.exports = {
 	createOrder,
+	getUserOrder,
+	getSellerOrder,
+	updateOrder,
+	analyticOrder,
+	ChartAnalyticOrder,
 };

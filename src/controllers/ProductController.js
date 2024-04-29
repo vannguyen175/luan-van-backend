@@ -68,11 +68,12 @@ const getAllProductsBySubCate = async (req, res) => {
 const getAllProducts = async (req, res) => {
 	try {
 		const { limit, page } = req.query;
-		const { filter } = req.body;
+		const { filter, onSale } = req.body;
 		const response = await ProductService.getAllProducts(
 			Number(limit) || 10,
 			Number(page) || 1,
-			filter
+			filter,
+			onSale
 		);
 		return res.status(200).json(response);
 	} catch (error) {
@@ -88,6 +89,15 @@ const detailProduct = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const getProductSeller = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const response = await ProductService.getProductSeller(id);
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
 
 module.exports = {
 	createProduct,
@@ -96,4 +106,5 @@ module.exports = {
 	getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
+	getProductSeller
 };

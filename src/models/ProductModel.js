@@ -20,7 +20,7 @@ const productSchema = new mongoose.Schema(
 		description: { type: String },
 		address: { type: String, required: true },
 		statePost: { type: String, enum: ["waiting", "approved", "reject"], default: "waiting" },
-		selled: { type: Boolean, default: false }, //tinh trang hang da duoc ban hay chua
+		selled: { type: String, enum: ["waiting", "true", "false"], default: "false" }, //tinh trang hang da duoc ban hay chua
 	},
 	{
 		timestamps: true,
