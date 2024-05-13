@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/ProductController");
 const { authMiddleware } = require("../config/middleware/authMiddleware");
-const UploadRoute = require("./UploadRoute");
+const upload = require ("../config/middleware/multer")
 
-router.post("/create", productController.createProduct);
+router.post("/create", upload.array("images"), productController.createProduct);
 router.put("/update/:id", productController.updateProduct);
 // router.delete("/delete/:id", authMiddleware, productController.deleteProduct);
 router.get("/getAll/:slug", productController.getAllProductsBySubCate); //lấy product theo subCate

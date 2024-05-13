@@ -2,9 +2,28 @@ const Product = require("../models/ProductModel");
 const Category = require("../models/CategoryModel");
 const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
+const cloudinary = require("../config/middleware/cloundiary.config");
+const upload = require("../config/middleware/multer");
 
-const createProduct = (newProduct) => {
-	return new Promise(async (resolve, reject) => {
+const uploadImage = async (images) => {
+	let newImageList = [];
+	for (const image of images) {
+		try {
+			const result = await cloudinary.uploader.upload(image.name, {
+				use_filename: true,
+				unique_filename: false,
+				overwrite: true,
+			});
+			newImageList.push(result.secure_url);
+		} catch (error) {
+			console.log("HAVE AN ERROR =>", error);
+		}
+	}
+	return newImageList;
+};
+
+const createProduct = async (newProduct) => {
+	try {
 		const {
 			idUser,
 			name,
@@ -18,12 +37,15 @@ const createProduct = (newProduct) => {
 		} = newProduct;
 		const sellerDetail = await User.findOne({ _id: idUser });
 		const sellerName = sellerDetail.name;
-		try {
+
+		const newImages = await uploadImage(images);
+		console.log("newImages", newImages);
+		if (newImages) {
 			const createProduct = await Product.create({
 				idUser,
 				sellerName: sellerName,
 				name,
-				images,
+				images: newImages,
 				subCategory,
 				stateProduct,
 				info,
@@ -31,18 +53,18 @@ const createProduct = (newProduct) => {
 				description,
 				address,
 			});
-			if (createProduct) {
-				resolve({
-					status: "SUCCESS",
-					message: "Tạo bài đăng thành công",
-					data: createProduct,
-				});
-			}
-		} catch (error) {
-			console.log(error);
-			reject(error);
+			console.log("created");
 		}
-	});
+
+		return {
+			status: "SUCCESS",
+			message: "Tạo bài đăng thành công",
+			data: createProduct,
+		};
+	} catch (error) {
+		console.log(error);
+		throw error;
+	}
 };
 
 const updateProduct = (productID, data) => {
@@ -173,7 +195,6 @@ const getAllProducts = (limit, page, filter, onSale) => {
 			//tong san pham thỏa mãn filter (statePost: 'waiting')
 			//dùng trong Quản lý bài đăng của Admin
 
-
 			if (filter == "all") {
 				const totalProducts = await Product.find()
 					.sort({ createdAt: "desc" })
@@ -185,7 +206,6 @@ const getAllProducts = (limit, page, filter, onSale) => {
 					.limit(limit)
 					.skip(limit * (page - 1));
 
-		
 				resolve({
 					status: "OK",
 					message: "SUCCESS",

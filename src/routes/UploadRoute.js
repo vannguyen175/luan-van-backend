@@ -1,8 +1,9 @@
 const express = require("express");
-const router = express.Router();
-const uploadCloud = require("../config/middleware/multer");
+const cloudinary = require("../config/middleware/cloundiary.config");
+const upload = require("../config/middleware/multer");
 const uploadMultiple = require("../config/middleware/uploader");
+const router = express.Router();
 
-router.post("/create", uploadCloud.array("images"), uploadMultiple);
+router.post("/image", upload.array("images"), uploadMultiple);
 
 module.exports = router;

@@ -1,6 +1,29 @@
 const { query } = require("express");
 const ProductService = require("../services/ProductService");
 const Logger = require("nodemon/lib/utils/log");
+const cloudinary = require("../config/middleware/cloundiary.config");
+const asyncHandler = require("express-async-handler");
+
+const uploadMultiple = asyncHandler(async (req, res, next) => {
+	try {
+		const images = req.files;
+		const imageUrls = [];
+
+		for (const image of images) {
+			const result = await cloudinary.uploader.upload(image.path, {
+				resource_type: "auto",
+			});
+			imageUrls.push(result.secure_url);
+		}
+		req.body.images = imageUrls;
+		console.log(req.body.images);
+		return req.body.images;
+		//next();
+	} catch (error) {
+		console.log("uploadMultiple error", error);
+		res.status(500).send(`Internal error at: uploadMultiple.js - ${error})`);
+	}
+});
 
 const createProduct = async (req, res) => {
 	try {
@@ -15,7 +38,21 @@ const createProduct = async (req, res) => {
 			idUser,
 			address,
 		} = req.body;
-
+		const imageUrls = [];
+		if (images) {
+			try {
+				for (const image of images) {
+					const result = await cloudinary.uploader.upload(image.path, {
+						resource_type: "auto",
+					});
+					imageUrls.push(result.secure_url);
+				}
+				req.body.images = imageUrls;
+				console.log(req.body.images);
+			} catch (error) {
+				console.log("HAVE AN ERROR =>", error);
+			}
+		}
 		if (!name || !images || !subCategory || !price || !info || !address) {
 			return res.status(200).json({
 				status: "ERROR",
@@ -106,5 +143,5 @@ module.exports = {
 	getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
-	getProductSeller
+	getProductSeller,
 };

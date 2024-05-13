@@ -4,7 +4,7 @@ const cartController = require("../controllers/CartController");
 const { authMiddleware } = require("../config/middleware/authMiddleware");
 
 router.post("/create", cartController.createCart);
-router.get("/:id", cartController.getCart);
+router.get("/:id", cartController.getCart); //idUser
 router.post("/delete", cartController.deleteCart);
 
 module.exports = router;

@@ -14,17 +14,19 @@ db.connect();
 dotenv.config();
 const port = process.env.PORT || 3001;
 
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_NAME,
+	api_key: process.env.CLOUDINARY_KEY,
+	api_secret: process.env.CLOUDINARY_SECRET,
+	secure: true,
+});
+
 const app = express();
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "35mb" }));
 routes(app);
 
-cloudinary.config({
-	cloud_name: process.env.CLOUD_NAME,
-	api_key: process.env.API_KEY,
-	api_secret: process.env.API_SECRET,
-});
 async function handleUpload(file) {
 	const res = await cloudinary.uploader.upload(file, {
 		resource_type: "auto",

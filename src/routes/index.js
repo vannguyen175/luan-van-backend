@@ -4,14 +4,16 @@ const categoryRoute = require("./CategoryRoute");
 const subCategoryRoute = require("./SubCategoryRoute");
 const orderRoute = require("./OrderRoute");
 const cartRoute = require("./CartRoute");
+const uploadRoute = require("./UploadRoute");
 
 const routes = (app) => {
-    app.use("/api/user", userRoute);
-    app.use("/api/product", productRoute);
-    app.use("/api/category", categoryRoute);
-    app.use("/api/sub-category", subCategoryRoute);
-    app.use("/api/order", orderRoute);
-    app.use("/api/cart", cartRoute);
+	app.use("/api/user", userRoute);
+	app.use("/api/product", productRoute);
+	app.use("/api/category", categoryRoute);
+	app.use("/api/sub-category", subCategoryRoute);
+	app.use("/api/order", orderRoute);
+	app.use("/api/cart", cartRoute);
+	app.use("/api/upload", uploadRoute);
 };
 
 module.exports = routes;

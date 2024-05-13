@@ -165,7 +165,8 @@ const updateOrder = (data, idOrder) => {
 const analyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			if (Object.keys(idUser).length > 0) {
+			console.log(idUser);
+			if (idUser !== undefined) {
 				//thống kê cho người dùng
 				let priceBought = 0;
 				const listProductBought = await Order.find({
@@ -212,7 +213,11 @@ const analyticOrder = (idUser) => {
 				//thống kê cho quản trị viên
 				let priceSelled = 0;
 				const listOrderSelled = await Order.find({ stateOrder: "approved" });
-				const listProductSelling = await Product.find({ selled: { $ne: "true" } });
+				//const listProductSelling = await Product.find({ selled: { $ne: "true" } });
+				const listProductSelling = await Product.find({
+					statePost: "approved",
+					selled: "false",
+				});
 
 				const listProductWaiting = await Product.find({
 					statePost: "waiting",

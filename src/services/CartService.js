@@ -80,12 +80,14 @@ const deleteCart = (idUser, idProduct) => {
 const getCart = (idUser, idProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const checkCart = await Cart.findOne({});
+			const checkCart = await Cart.findOne();
 			if (checkCart) {
 				let result = [];
 				const data = await Cart.find({ idUser: idUser });
+				let productDetail;
 				for (let index = 0; index < data[0].idProduct.length; index++) {
-					const productDetail = await Product.findById(data[0].idProduct[index]);
+					productDetail = await Product.findById(data[0].idProduct[index]);
+					console.log('productDetail', data[0].idProduct[index]);
 					result.push(productDetail);
 				}
 				return resolve({

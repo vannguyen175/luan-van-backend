@@ -82,7 +82,7 @@ const updateOrder = async (req, res) => {
 };
 const analyticOrder = async (req, res) => {
 	try {
-		const idUser = req.body;
+		const { idUser } = req.body;
 		const response = await OrderService.analyticOrder(idUser);
 		return res.status(200).json(response);
 	} catch (error) {
@@ -107,5 +107,5 @@ module.exports = {
 	getSellerOrder,
 	updateOrder,
 	analyticOrder,
-	ChartAnalyticOrder
+	ChartAnalyticOrder,
 };

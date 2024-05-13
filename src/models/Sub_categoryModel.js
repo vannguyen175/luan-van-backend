@@ -6,7 +6,12 @@ const sub_categorySchema = new mongoose.Schema(
 	{
 		name: { type: String, required: true },
 		slug: { type: String, slug: "name" },
-		infoSubCate: [{ type: String }],
+		infoSubCate: [
+			{
+				name: { type: String, required: true },
+				option: [{ type: String }],
+			},
+		],
 		category: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Category",
