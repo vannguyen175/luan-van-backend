@@ -95,6 +95,14 @@ const detailSubCategory = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const getAllSubCategory = async (req, res) => {
+	try {
+		const response = await SubCategoryService.getAllSubCategory();
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
 
 module.exports = {
 	createSubCategory,
@@ -103,4 +111,5 @@ module.exports = {
 	detailSubCategory,
 	getOptionSubCategory,
 	createInfoSubCate,
+	getAllSubCategory
 };

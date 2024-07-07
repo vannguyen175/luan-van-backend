@@ -51,7 +51,6 @@ const createCart = (newCart) => {
 const deleteCart = (idUser, idProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log("service", idUser);
 			const checkCart = await Cart.findOne({ idUser: idUser, idProduct: idProduct });
 			if (checkCart) {
 				const result = await Cart.findOneAndUpdate(

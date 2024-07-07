@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/ProductController");
 const { authMiddleware } = require("../config/middleware/authMiddleware");
-const upload = require ("../config/middleware/multer")
+const upload = require("../config/middleware/multer");
 
 router.post("/create", upload.array("images"), productController.createProduct);
 router.put("/update/:id", productController.updateProduct);

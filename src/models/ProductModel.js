@@ -10,7 +10,7 @@ const productSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		sellerName: { type: String, required: true },
 		images: [],
-		subCategory: { type: String, required: true },
+		subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Sub_category", required: true },
 		stateProduct: {
 			type: String,
 			enum: ["new", "used"],
@@ -18,9 +18,20 @@ const productSchema = new mongoose.Schema(
 		info: { type: Object, required: true },
 		price: { type: Number, required: true },
 		description: { type: String },
-		address: { type: String, required: true },
-		statePost: { type: String, enum: ["waiting", "approved", "reject"], default: "waiting" },
-		selled: { type: String, enum: ["waiting", "true", "false"], default: "false" }, //tinh trang hang da duoc ban hay chua
+		//tỉnh,tp => quận, huyện, thị xã => phường, xã, thị trấn => địa chỉ cụ thể
+		address: {
+			province: { type: String, required: true },
+			district: { type: String, required: true },
+			ward: { type: String, required: true },
+			address: { type: String, required: true },
+			phone: { type: String, required: true },
+		},
+		statePost: {
+			type: String,
+			enum: ["waiting", "approved", "reject", "selled"],
+			default: "waiting",
+		},
+		rejectReason: { type: String },
 	},
 	{
 		timestamps: true,

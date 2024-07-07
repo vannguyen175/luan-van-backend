@@ -1,8 +1,8 @@
 const UserService = require("../services/UserService.js");
+
 const createUser = async (req, res) => {
 	try {
-		const { name, email, password, confirmPassword, phone, isAdmin, address, avatar } =
-			req.body;
+		const { name, email, password, confirmPassword, phone } = req.body;
 		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 		const isCheckEmail = regexEmail.test(email);
 		if (!name || !email || !password || !confirmPassword || !phone) {
@@ -50,6 +50,29 @@ const loginUser = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const loginAdmin = async (req, res) => {
+	try {
+		const { email, password } = req.body.data; //destructuring
+		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+		const isCheckEmail = regexEmail.test(email);
+
+		if (!email || !password) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Vui lòng điền đầy đủ thông tin.",
+			});
+		} else if (!isCheckEmail) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Email không hợp lệ.",
+			});
+		}
+		const response = await UserService.loginAdmin(req.body.data);
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
 
 const updateUser = async (req, res) => {
 	try {
@@ -57,7 +80,7 @@ const updateUser = async (req, res) => {
 		const data = req.body;
 		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 		const isCheckEmail = regexEmail.test(data.email);
-		if (!data.name || !data.email || !data.password || !data.confirmPassword || !data.phone) {
+		if (!data.name || !data.email) {
 			return res.status(200).json({
 				status: `ERROR`,
 				message: "Vui lòng điền đầy đủ thông tin.",
@@ -95,7 +118,8 @@ const deleteUser = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
 	try {
-		const response = await UserService.getAllUsers();
+		const role = req.body.role;
+		const response = await UserService.getAllUsers(role);
 		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });
@@ -126,8 +150,17 @@ const logoutUser = async (req, res) => {
 const infoUser = async (req, res) => {
 	try {
 		const userID = req.params.id;
-		
 		const response = await UserService.infoUser(userID);
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
+
+const searchUser = async (req, res) => {
+	try {
+		const key = req.params.key;
+		const response = await UserService.searchUser(key);
 		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });
@@ -137,10 +170,12 @@ const infoUser = async (req, res) => {
 module.exports = {
 	createUser,
 	loginUser,
+	loginAdmin,
 	updateUser,
 	deleteUser,
 	getAllUsers,
 	detailUser,
 	logoutUser,
-	infoUser
+	infoUser,
+	searchUser,
 };

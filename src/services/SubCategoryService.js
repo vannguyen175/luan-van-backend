@@ -223,6 +223,23 @@ const detailSubCategory = (slug) => {
 		}
 	});
 };
+const getAllSubCategory = (slug) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const result = await SubCategory.find({});
+			if (result) {
+				return resolve({
+					status: "SUCCESS",
+					message: "Get all sub-categories successfully",
+					data: result,
+				});
+			}
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
 
 module.exports = {
 	createSubCategory,
@@ -231,4 +248,5 @@ module.exports = {
 	detailSubCategory,
 	getOptionSubCategory,
 	createInfoSubCate,
+	getAllSubCategory,
 };
