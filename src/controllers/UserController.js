@@ -1,4 +1,5 @@
 const UserService = require("../services/UserService.js");
+const JwtService = require("../services/JwtService.js");
 
 const createUser = async (req, res) => {
 	try {
@@ -10,12 +11,14 @@ const createUser = async (req, res) => {
 				status: `ERROR`,
 				message: "Vui lòng điền đầy đủ thông tin.",
 			});
-		} else if (!isCheckEmail) {
+		}
+		if (!isCheckEmail) {
 			return res.status(200).json({
 				status: `ERROR`,
 				message: "Email không hợp lệ.",
 			});
-		} else if (password != confirmPassword) {
+		}
+		if (password != confirmPassword) {
 			return res.status(200).json({
 				status: `ERROR`,
 				message: "Mật khẩu nhập lại không hợp lệ.",
@@ -45,7 +48,16 @@ const loginUser = async (req, res) => {
 			});
 		}
 		const response = await UserService.loginUser(req.body);
-		return res.status(200).json(response);
+		const { refresh_token, ...newResponse } = response;
+
+		//lưu refresh_token vào cookie phía trình duyệt
+		res.cookie("refresh_token", refresh_token, {
+			httpOnly: true, // Bảo mật: cookie chỉ có thể được truy cập bởi HTTP, không phải JavaScript
+			secure: false, // Bảo mật: cookie chỉ được gửi qua HTTPS (bỏ qua khi thử nghiệm trên localhost)
+			sameSite: "strict", // Bảo vệ chống tấn công CSRF
+		});
+
+		return res.status(200).json(newResponse);
 	} catch (error) {
 		return res.status(404).json({ message: error });
 	}
@@ -80,6 +92,12 @@ const updateUser = async (req, res) => {
 		const data = req.body;
 		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 		const isCheckEmail = regexEmail.test(data.email);
+		if (data.password != data.confirmPassword) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Mật khẩu nhập lại không hợp lệ.",
+			});
+		}
 		if (!data.name || !data.email) {
 			return res.status(200).json({
 				status: `ERROR`,
@@ -105,7 +123,7 @@ const deleteUser = async (req, res) => {
 		const userID = req.params.id;
 		if (!userID) {
 			return res.status(200).json({
-				status: `ERR`,
+				status: `ERROR`,
 				message: "The user_id is requied",
 			});
 		}
@@ -167,6 +185,23 @@ const searchUser = async (req, res) => {
 	}
 };
 
+const refreshToken = async (req, res) => {
+	try {
+		const token = req.cookies.refresh_token;
+		if (!token) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Token is requied",
+			});
+		}
+		const response = await JwtService.refreshTokenService(token);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+
 module.exports = {
 	createUser,
 	loginUser,
@@ -178,4 +213,5 @@ module.exports = {
 	logoutUser,
 	infoUser,
 	searchUser,
+	refreshToken,
 };

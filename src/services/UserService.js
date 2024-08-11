@@ -1,7 +1,7 @@
 const User = require("../models/UserModel");
 const Address = require("../models/AddressModel");
 const bcrypt = require("bcrypt"); //ma hoa mat khau
-const { genneralAccessToken } = require("./JwtService");
+const { genneralAccessToken, genneralRefreshToken } = require("./JwtService");
 const { required } = require("nodemon/lib/config");
 
 const createUser = (newUser) => {
@@ -73,10 +73,15 @@ const loginUser = (loginUser) => {
 				isAdmin: checkUser.isAdmin,
 			});
 
+			const refresh_token = await genneralRefreshToken({
+				id: checkUser.id,
+				isAdmin: checkUser.isAdmin,
+			});
 			resolve({
 				status: "SUCCESS",
 				message: "SUCCESS",
 				access_token,
+				refresh_token,
 			});
 		} catch (error) {
 			reject(error);
@@ -109,11 +114,16 @@ const loginAdmin = (loginAdmin) => {
 				id: checkUser.id,
 				isAdmin: checkUser.isAdmin,
 			});
+			const refresh_token = await genneralRefreshToken({
+				id: checkUser.id,
+				isAdmin: checkUser.isAdmin,
+			});
 
 			resolve({
 				status: "SUCCESS",
 				message: "SUCCESS",
 				access_token,
+				refresh_token,
 			});
 		} catch (error) {
 			reject(error);
@@ -125,6 +135,7 @@ const loginAdmin = (loginAdmin) => {
 const updateUser = (userID, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			console.log(data);
 			const checkUser = await User.findOne({ _id: userID });
 			if (checkUser === null) {
 				resolve({
@@ -133,13 +144,7 @@ const updateUser = (userID, data) => {
 				});
 			}
 			const hash = bcrypt.hashSync(data.password, 10);
-			const updateUser = await User.findByIdAndUpdate(
-				userID,
-				{ data, password: hash },
-				{
-					new: true,
-				}
-			);
+			const updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
 			const updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
 				new: true,
 			});
@@ -182,6 +187,7 @@ const getAllUsers = (role) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let data = {};
+
 			if (role === "user") {
 				data = await Address.find().populate({
 					path: "user",
@@ -228,14 +234,12 @@ const infoUser = (userID) => {
 		try {
 			const result = await User.findById(userID);
 			const address = await Address.findOne({ user: userID });
+			const { password, ...user } = result; //destructuring
 			const data = {
-				name: result.name,
-				email: result.email,
-				avatar: result.avatar,
-				phone: address.phone,
-				address: address.province,
-				rating: result.rating,
+				...address._doc,
+				...user._doc,
 			};
+
 			resolve({
 				status: "OK",
 				message: "SUCCESS",

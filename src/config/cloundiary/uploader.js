@@ -1,5 +1,4 @@
 const cloudinary = require("cloudinary").v2;
-const multer = require("multer");
 const asyncHandler = require("express-async-handler");
 
 cloudinary.config({

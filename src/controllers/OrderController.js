@@ -3,21 +3,9 @@ const OrderService = require("../services/OrderService");
 
 const createOrder = async (req, res) => {
 	try {
-		const {
-			orderItems,
-			shippingAddress,
-			phoneSeller,
-			paymentMethod,
-			itemPrice,
-			shippingPrice,
-			totalPrice,
-			buyer,
-			seller,
-			isPaid,
-			paidAt,
-		} = req.body;
+		const { shippingDetail, paymentMethod } = req.body;
 
-		if (!orderItems || !shippingAddress || !paymentMethod) {
+		if (!shippingDetail || !paymentMethod) {
 			return res.status(200).json({
 				status: "ERROR",
 				message: "Vui lòng nhập đầy đủ thông tin",
@@ -31,37 +19,15 @@ const createOrder = async (req, res) => {
 	}
 };
 
-//lấy thông tin các đơn hàng đã mua của Người dùng
-const getUserOrder = async (req, res) => {
+//lấy thông tin các đơn hàng
+const getOrders = async (req, res) => {
 	try {
-		const { stateOrder } = req.body;
-		const idBuyer = req.params; //id_buyer
-		if (!idBuyer) {
-			return res.status(200).json({
-				status: "ERROR",
-				message: "Vui lòng nhập đầy đủ thông tin",
-			});
-		}
-		const response = await OrderService.getUserOrder(stateOrder, idBuyer);
-		return res.status(200).json(response);
-	} catch (error) {
-		console.log(error);
-		return res.status(404).json({ message: error });
-	}
-};
+		console.log("req.body.data", req.body.data);
 
-//lấy thông tin các đơn hàng đã bán của Nhà bán hàng
-const getSellerOrder = async (req, res) => {
-	try {
-		const { stateOrder } = req.body;
-		const idSeller = req.params; //id_buyer
-		if (!idSeller) {
-			return res.status(200).json({
-				status: "ERROR",
-				message: "Vui lòng nhập đầy đủ thông tin",
-			});
-		}
-		const response = await OrderService.getSellerOrder(stateOrder, idSeller);
+		const { seller, buyer, status } = req.body.data;
+		const page = req.query.page || 1;
+		const limit = req.query.limit || 10;
+		const response = await OrderService.getOrders(seller, buyer, status, page, limit);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
@@ -73,7 +39,23 @@ const updateOrder = async (req, res) => {
 		const idOrder = req.params.id;
 		const data = req.body; // Lấy dữ liệu từ body của yêu cầu
 
-		const response = await OrderService.updateOrder(req.body, idOrder);
+		const response = await OrderService.updateOrder(idOrder, req.body);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("error at controller: ", error);
+		return res.status(404).json({ message: error });
+	}
+};
+const cancelOrder = async (req, res) => {
+	try {
+		const { reason, idOrder } = req.body;
+		if (!reason) {
+			return res.status(200).json({
+				status: "ERROR",
+				message: "Vui lòng chọn lý do hủy đơn.",
+			});
+		}
+		const response = await OrderService.cancelOrder(reason, idOrder);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log("error at controller: ", error);
@@ -103,9 +85,9 @@ const ChartAnalyticOrder = async (req, res) => {
 
 module.exports = {
 	createOrder,
-	getUserOrder,
-	getSellerOrder,
 	updateOrder,
 	analyticOrder,
 	ChartAnalyticOrder,
+	getOrders,
+	cancelOrder,
 };

@@ -4,7 +4,6 @@ const routes = require("./routes");
 const db = require("../src/config/db");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const fileupload = require("express-fileupload");
 const Multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 
@@ -22,8 +21,11 @@ cloudinary.config({
 });
 
 const app = express();
-
 app.use(cors());
+var cookies = require("cookie-parser");
+
+app.use(cookies());
+
 app.use(bodyParser.json({ limit: "35mb" }));
 routes(app);
 

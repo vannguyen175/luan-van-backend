@@ -2,8 +2,7 @@ const Product = require("../models/ProductModel");
 const Category = require("../models/CategoryModel");
 const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
-const cloudinary = require("../config/middleware/cloundiary.config");
-const upload = require("../config/middleware/multer");
+const cloudinary = require("../config/cloundiary/cloundiary.config");
 const { Schema } = require("mongoose");
 
 const uploadImage = async (images) => {

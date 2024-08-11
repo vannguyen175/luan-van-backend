@@ -1,139 +1,131 @@
 //POST: /api/order/create
 const Product = require("../models/ProductModel");
-const Order = require("../models/OrderModel");
+const { Order, OrderStatus } = require("../models/OrderModel");
 const User = require("../models/UserModel");
 const { default: mongoose } = require("mongoose");
+
+const cancelReason = {
+	0: "Muốn thay đổi địa chỉ giao hàng",
+	1: "Tìm thấy giá rẻ hơn ở chỗ khác",
+	2: "Thủ tục thanh toán rắc rối",
+	3: "Thay đổi ý",
+	4: "Khác",
+};
 
 const createOrder = (newOrder) => {
 	return new Promise(async (resolve, reject) => {
 		const {
-			orderItems,
-			shippingAddress,
-			phoneSeller,
+			product, //id_product
+			shippingDetail,
 			paymentMethod,
-			itemPrice,
-			shippingPrice,
-			totalPrice,
 			buyer,
 			seller,
-			isPaid,
-			paidAt,
 		} = newOrder;
 		try {
-			const productDetail = await Product.findById({ _id: orderItems.idProduct });
-			const total_price = parseFloat(productDetail.price) + parseFloat(shippingPrice);
-			const checkOrder = await Order.findOne({
-				"orderItems.product": orderItems.idProduct,
+			await Product.findByIdAndUpdate(product, { statePost: "selled" });
+			const createOrder = await Order.create({
+				product: product,
+				shippingDetail: {
+					address: shippingDetail.address,
+					email: shippingDetail.email,
+					phone: shippingDetail.phone,
+					shippingPrice: shippingDetail.shippingPrice,
+					isPaid: paymentMethod === "autopay",
+				},
+				paymentMethod: paymentMethod,
+				buyer: buyer,
+				seller: seller,
 			});
-
-			if (checkOrder) {
-				return resolve({
-					status: "ERROR",
-					message: "Sản phẩm đã được bán",
-				});
-			} else {
-				await Product.findByIdAndUpdate(orderItems.idProduct, { selled: "waiting" });
-				const createOrder = await Order.create({
-					orderItems: {
-						name: productDetail.name,
-						image: productDetail.images[0].name,
-						product: orderItems.idProduct,
-					},
-					shippingAddress: {
-						address: shippingAddress.address,
-						email: shippingAddress.email,
-						phone: shippingAddress.phone,
-					},
-					paymentMethod,
-					itemPrice: productDetail.price,
-					shippingPrice,
-					totalPrice: total_price,
-					buyer,
-					seller: productDetail.idUser,
-					isPaid: false,
-				});
-				return resolve({
-					status: "SUCCESS",
-					message: "SUCCESS",
-					data: createOrder,
-				});
-			}
+			return resolve({
+				status: "SUCCESS",
+				message: "Đặt hàng thành công!",
+				data: createOrder,
+			});
 		} catch (error) {
 			console.log(`Have error at createOrder service: ${error}`);
 		}
 	});
 };
 
-const getUserOrder = (stateOrder, idBuyer) => {
+const getOrders = (seller, buyer, status, page, limit) => {
 	return new Promise(async (resolve, reject) => {
-		const ObjectId = require("mongodb").ObjectId;
 		try {
-			if (stateOrder) {
-				const result = await Order.find({
-					buyer: new ObjectId(idBuyer),
-					stateOrder: stateOrder,
-				});
-				return resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-				});
-			} else {
-				const result = await Order.find({ buyer: new ObjectId(idBuyer) });
-				return resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-				});
-			}
-		} catch (error) {
-			console.log("error", error);
-			// 			reject(error);
-		}
-	});
-};
+			console.log("buyer", buyer);
 
-const getSellerOrder = (stateOrder, isSeller) => {
-	return new Promise(async (resolve, reject) => {
-		const ObjectId = require("mongodb").ObjectId;
-		try {
-			let data;
-			if (stateOrder != "all") {
-				data = await Order.find({
-					seller: new ObjectId(isSeller),
-					stateOrder: stateOrder,
-				});
+			const perPage = limit; //Số items trên 1 page
+
+			//kiểm tra + cập nhật trạng thái 5 phút của state "đang vận chuyển" và "đang giao hàng"
+			const now = new Date();
+			const fiveMinutesAgo = new Date(now - 5 * 60000);
+
+			// Cập nhật trạng thái từ "Đang vận chuyển" sang "Giao hàng"
+			await Order.updateMany(
+				{ status: "Đang vận chuyển", updatedAt: { $lt: fiveMinutesAgo } },
+				{ $set: { status: "Giao hàng", updatedAt: now } }
+			);
+
+			// Cập nhật trạng thái từ "Giao hàng" sang "Đã giao"
+			await Order.updateMany({ status: "Giao hàng", updatedAt: { $lt: fiveMinutesAgo } }, { $set: { status: "Đã giao", updatedAt: now } });
+
+			let statusOrder = null;
+			if (status) {
+				statusOrder = OrderStatus[status];
+			}
+
+			let orders = {};
+			if (seller) {
+				//lấy đơn hàng theo người bán
+				orders = await Order.find({ seller: seller, status: statusOrder })
+					.sort({ _id: 1 }) //Lấy order mới nhất
+					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
+					.limit(perPage)
+					.populate({
+						path: "product",
+						select: "images name sellerName price",
+						populate: {
+							path: "subCategory",
+							select: "name",
+						},
+					})
+					.populate({
+						path: "buyer",
+						select: "avatar name",
+					});
 			} else {
-				data = await Order.find({ seller: new ObjectId(isSeller) });
+				//lấy đơn hàng theo người mua
+				orders = await Order.find({ buyer: buyer, status: statusOrder })
+					.sort({ _id: 1 }) //Lấy order mới nhất
+					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
+					.limit(perPage)
+					.populate({
+						path: "product",
+						select: "images name sellerName price",
+						populate: {
+							path: "subCategory",
+							select: "name",
+						},
+					});
 			}
-			let result = [];
-			if (data !== null) {
-				for (let i = 0; i < data.length; i++) {
-					let buyerInfo = await User.findById(data[i].buyer);
-					data[i].buyerName = buyerInfo.name;
-					result[i] = { ...data[i] };
-				}
-				return resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-				});
-			}
+			resolve({
+				status: "SUCCESS",
+				message: "Lấy đơn hàng thành công!",
+				data: orders,
+			});
 		} catch (error) {
-			console.log("error", error);
 			reject(error);
+			console.log(error);
 		}
 	});
 };
 
-const updateOrder = (data, idOrder) => {
+const updateOrder = (idOrder, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const checkOrder = await Order.findById({ _id: idOrder });
 			if (checkOrder === null) {
 				reject({
 					status: "ERROR",
-					message: "Order is not exists",
+					message: "Có lỗi xảy ra.",
 				});
 			} else {
 				if (data.stateOrder === "approved") {
@@ -145,13 +137,56 @@ const updateOrder = (data, idOrder) => {
 						selled: false,
 					});
 				}
-				const updateOrder = await Order.findByIdAndUpdate(idOrder, data, {
-					new: true,
-				});
+				let status = checkOrder.status;
+				if (data.status) {
+					status = OrderStatus[data.status];
+				}
+				const updateOrder = await Order.findByIdAndUpdate(
+					idOrder,
+					{ ...data, status: status },
+					{
+						new: true,
+					}
+				);
 
 				return resolve({
-					status: "OK",
-					message: "SUCCESS",
+					status: "SUCCESS",
+					message: "Cập nhật thành công",
+					data: updateOrder,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
+
+const cancelOrder = (reason, idOrder) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkOrder = await Order.findById({ _id: idOrder });
+			if (checkOrder === null) {
+				reject({
+					status: "ERROR",
+					message: "Đơn hàng không tồn tại",
+				});
+			} else {
+				await Product.findByIdAndUpdate({ _id: checkOrder.product }, { statePost: "approved" });
+				const updateOrder = await Order.findByIdAndUpdate(
+					idOrder,
+					{
+						status: OrderStatus[4], //status: đã hủy
+						cancelReason: cancelReason[reason],
+					},
+					{
+						new: true,
+					}
+				);
+
+				return resolve({
+					status: "SUCCESS",
+					message: "Hủy đơn hàng thành công",
 					data: updateOrder,
 				});
 			}
@@ -311,9 +346,9 @@ const ChartAnalyticOrder = (idUser) => {
 
 module.exports = {
 	createOrder,
-	getUserOrder,
-	getSellerOrder,
 	updateOrder,
 	analyticOrder,
 	ChartAnalyticOrder,
+	getOrders,
+	cancelOrder,
 };

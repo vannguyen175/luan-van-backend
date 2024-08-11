@@ -1,30 +1,33 @@
 const mongoose = require("mongoose");
 
+const OrderStatus = {
+	0: "Đang xử lý",
+	1: "Đang vận chuyển",
+	2: "Giao hàng",
+	3: "Đã giao",
+	4: "Đã hủy",
+};
+
 const orderSchema = new mongoose.Schema(
 	{
-		orderItems: {
-			name: { type: String, required: true },
-			image: { type: String, required: true },
-			product: {
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "Product",
-				required: true,
-			},
-		},
-
-		shippingAddress: {
-			email: { type: String, required: true },
-			address: { type: String, required: true },
-			phone: { type: Number, required: true },
+		product: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Product",
+			required: true,
 		},
 
 		paymentMethod: {
 			type: String,
 			enum: ["cash", "autopay"],
 		},
-		itemPrice: { type: Number, required: true },
-		shippingPrice: { type: Number, required: true },
-		totalPrice: { type: Number, required: true },
+		shippingDetail: {
+			email: { type: String, required: true }, //email_buyer
+			address: { type: String, required: true }, //address_buyer
+			phone: { type: Number, required: true }, //phone_buyer
+			shippingPrice: { type: Number, required: true },
+			isPaid: { type: Boolean, default: false }, //da thanh toan hay chua (đối với paymentMethod = "cash")
+			deliveredAt: { type: Date }, //thời điểm giao hàng thành công
+		},
 		buyer: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
@@ -35,15 +38,12 @@ const orderSchema = new mongoose.Schema(
 			ref: "User",
 			required: true,
 		},
-		stateOrder: { type: String, enum: ["waiting", "approved", "reject"], default: "waiting" },
-		isPaid: { type: Boolean, default: false }, //da thanh toan hay chua
-		//paidAt: { type: Date }, //thoi diem thanh toan => createdAt
-		isDelivered: { type: Boolean, default: false }, //da giao hang chua
-		deliveredAt: { type: Date }, //giao hang vao luc nao
+		status: { type: String, default: OrderStatus[0], required: true },
+		cancelReason: { type: String },
 	},
 	{
 		timestamps: true,
 	}
 );
 const Order = mongoose.model("Order", orderSchema);
-module.exports = Order;
+module.exports = { Order, OrderStatus };

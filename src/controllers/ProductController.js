@@ -1,8 +1,5 @@
-const { query } = require("express");
 const ProductService = require("../services/ProductService");
-const Logger = require("nodemon/lib/utils/log");
-const cloudinary = require("../config/middleware/cloundiary.config");
-const asyncHandler = require("express-async-handler");
+const cloudinary = require("../config/cloundiary/cloundiary.config");
 
 const createProduct = async (req, res) => {
 	try {
@@ -56,13 +53,7 @@ const getAllProductsBySubCate = async (req, res) => {
 	try {
 		const { limit, page, sort, filter } = req.query;
 		const slug = req.params.slug; //subCategory's slug
-		const response = await ProductService.getAllProductsBySubCate(
-			slug,
-			Number(limit) || 10,
-			Number(page) || 1,
-			sort,
-			filter
-		);
+		const response = await ProductService.getAllProductsBySubCate(slug, Number(limit) || 10, Number(page) || 1, sort, filter);
 		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });
