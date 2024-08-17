@@ -62,6 +62,36 @@ const loginUser = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const loginWithGoogle = async (req, res) => {
+	try {
+		const { email, name, picture } = req.body;
+		const response = await UserService.loginWithGoogle(email, name, picture);
+		const { refresh_token, ...newResponse } = response;
+		res.cookie("refresh_token", refresh_token, {
+			httpOnly: true,
+			secure: false,
+			sameSite: "strict",
+		});
+		return res.status(200).json(newResponse);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
+const loginWithFacebook = async (req, res) => {
+	try {
+		const { email, name, picture } = req.body;
+		const response = await UserService.loginWithFacebook(email, name, picture);
+		const { refresh_token, ...newResponse } = response;
+		res.cookie("refresh_token", refresh_token, {
+			httpOnly: true,
+			secure: false,
+			sameSite: "strict",
+		});
+		return res.status(200).json(newResponse);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
 const loginAdmin = async (req, res) => {
 	try {
 		const { email, password } = req.body.data; //destructuring
@@ -80,7 +110,16 @@ const loginAdmin = async (req, res) => {
 			});
 		}
 		const response = await UserService.loginAdmin(req.body.data);
-		return res.status(200).json(response);
+		const { refresh_token, ...newResponse } = response;
+
+		//lưu refresh_token vào cookie phía trình duyệt
+		res.cookie("refresh_token", refresh_token, {
+			httpOnly: true, // Bảo mật: cookie chỉ có thể được truy cập bởi HTTP, không phải JavaScript
+			secure: false, // Bảo mật: cookie chỉ được gửi qua HTTPS (bỏ qua khi thử nghiệm trên localhost)
+			sameSite: "strict", // Bảo vệ chống tấn công CSRF
+		});
+
+		return res.status(200).json(newResponse);
 	} catch (error) {
 		return res.status(404).json({ message: error });
 	}
@@ -205,6 +244,8 @@ const refreshToken = async (req, res) => {
 module.exports = {
 	createUser,
 	loginUser,
+	loginWithGoogle,
+	loginWithFacebook,
 	loginAdmin,
 	updateUser,
 	deleteUser,

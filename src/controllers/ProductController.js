@@ -1,5 +1,13 @@
 const ProductService = require("../services/ProductService");
 const cloudinary = require("../config/cloundiary/cloundiary.config");
+const { Server } = require("socket.io");
+
+// Socket.IO
+const io = new Server({
+	cors: {
+		origin: "http://localhost:3006", //localhost fontend
+	},
+});
 
 const createProduct = async (req, res) => {
 	try {

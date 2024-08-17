@@ -22,8 +22,6 @@ const createOrder = async (req, res) => {
 //lấy thông tin các đơn hàng
 const getOrders = async (req, res) => {
 	try {
-		console.log("req.body.data", req.body.data);
-
 		const { seller, buyer, status } = req.body.data;
 		const page = req.query.page || 1;
 		const limit = req.query.limit || 10;

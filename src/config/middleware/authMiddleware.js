@@ -12,8 +12,10 @@ const authMiddleware = (req, res, next) => {
 		if (user?.isAdmin) {
 			next();
 		} else {
+			console.log(user);
+			
 			return res.status(404).json({
-				message: "The authemtication",
+				message: "The authemtication 2",
 				status: "ERROR",
 			});
 		}

@@ -2,7 +2,6 @@ const User = require("../models/UserModel");
 const Address = require("../models/AddressModel");
 const bcrypt = require("bcrypt"); //ma hoa mat khau
 const { genneralAccessToken, genneralRefreshToken } = require("./JwtService");
-const { required } = require("nodemon/lib/config");
 
 const createUser = (newUser) => {
 	return new Promise(async (resolve, reject) => {
@@ -89,6 +88,99 @@ const loginUser = (loginUser) => {
 		}
 	});
 };
+
+const loginWithGoogle = (email, name, picture) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkUser = await User.findOne({ email: email, isAdmin: false });
+			let access_token = null;
+			let refresh_token = null;
+			//nếu account không tồn tại => đăng ký
+			if (checkUser === null) {
+				const newUser = await User.create({
+					email,
+					name,
+					avatar: picture,
+				});
+				await Address.create({ user: newUser._id });
+				access_token = await genneralAccessToken({
+					id: newUser.id,
+					isAdmin: newUser.isAdmin,
+				});
+				refresh_token = await genneralRefreshToken({
+					id: newUser.id,
+					isAdmin: newUser.isAdmin,
+				});
+			} else {
+				//nếu account có tồn tại => lấy token
+				access_token = await genneralAccessToken({
+					id: checkUser.id,
+					isAdmin: checkUser.isAdmin,
+				});
+				refresh_token = await genneralRefreshToken({
+					id: checkUser.id,
+					isAdmin: checkUser.isAdmin,
+				});
+			}
+
+			resolve({
+				status: "SUCCESS",
+				message: "Đăng nhập tài khoản thành công!",
+				access_token,
+				refresh_token,
+			});
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
+const loginWithFacebook = (email, name, picture) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkUser = await User.findOne({ email: email, isAdmin: false });
+			let access_token = null;
+			let refresh_token = null;
+			//nếu account không tồn tại => đăng ký
+			if (checkUser === null) {
+				const newUser = await User.create({
+					email,
+					name,
+					avatar: picture,
+				});
+				await Address.create({ user: newUser._id });
+				access_token = await genneralAccessToken({
+					id: newUser.id,
+					isAdmin: newUser.isAdmin,
+				});
+				refresh_token = await genneralRefreshToken({
+					id: newUser.id,
+					isAdmin: newUser.isAdmin,
+				});
+			} else {
+				//nếu account có tồn tại => lấy token
+				access_token = await genneralAccessToken({
+					id: checkUser.id,
+					isAdmin: checkUser.isAdmin,
+				});
+				refresh_token = await genneralRefreshToken({
+					id: checkUser.id,
+					isAdmin: checkUser.isAdmin,
+				});
+			}
+
+			resolve({
+				status: "SUCCESS",
+				message: "Đăng nhập tài khoản thành công!",
+				access_token,
+				refresh_token,
+			});
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
 const loginAdmin = (loginAdmin) => {
 	return new Promise(async (resolve, reject) => {
 		const { email, password } = loginAdmin;
@@ -112,11 +204,11 @@ const loginAdmin = (loginAdmin) => {
 			//sau khi ktra login hop le
 			const access_token = await genneralAccessToken({
 				id: checkUser.id,
-				isAdmin: checkUser.isAdmin,
+				isAdmin: true,
 			});
 			const refresh_token = await genneralRefreshToken({
 				id: checkUser.id,
-				isAdmin: checkUser.isAdmin,
+				isAdmin: true,
 			});
 
 			resolve({
@@ -135,19 +227,42 @@ const loginAdmin = (loginAdmin) => {
 const updateUser = (userID, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log(data);
 			const checkUser = await User.findOne({ _id: userID });
+			const checkAddress = await Address.findOne({ user: userID });
 			if (checkUser === null) {
 				resolve({
 					status: "ERROR",
 					message: "User is not exists",
 				});
 			}
-			const hash = bcrypt.hashSync(data.password, 10);
-			const updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
-			const updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
-				new: true,
-			});
+			let updateUser = {};
+			let updateAddress = {};
+			if (checkUser.password) {
+				const hash = bcrypt.hashSync(data.password, 10);
+				updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
+				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
+					new: true,
+				});
+			} else if (checkAddress) {
+				updateUser = await User.findByIdAndUpdate(userID, { ...data }, { new: true });
+				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
+					new: true,
+				});
+			} else {
+				updateUser = await User.findByIdAndUpdate(userID, { ...data }, { new: true });
+				try {
+					updateAddress = await Address.create({
+						user: userID,
+						...data,
+					});
+				} catch (error) {
+					resolve({
+						status: "ERROR",
+						message: "Số điện thoại đã có người đăng ký",
+					});
+				}
+			}
+
 			resolve({
 				status: "OK",
 				message: "SUCCESS",
@@ -233,10 +348,12 @@ const infoUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const result = await User.findById(userID);
+
 			const address = await Address.findOne({ user: userID });
+
 			const { password, ...user } = result; //destructuring
 			const data = {
-				...address._doc,
+				...address?._doc,
 				...user._doc,
 			};
 
@@ -286,6 +403,7 @@ const searchUser = (key) => {
 
 module.exports = {
 	createUser,
+	loginWithGoogle,
 	loginUser,
 	loginAdmin,
 	updateUser,
@@ -294,4 +412,5 @@ module.exports = {
 	detailUser,
 	infoUser,
 	searchUser,
+	loginWithFacebook,
 };

@@ -14,14 +14,14 @@ const genneralRefreshToken = async (payload) => {
 
 const refreshTokenService = async (token) => {
 	return new Promise(async (resolve, reject) => {
-		try {
+		try {			
 			jwt.verify(token, "refresh_token", async (error, user) => {
 				if (error) {
 					resolve({
 						status: "ERROR",
 						message: "The authemtication",
 					});
-				}
+				}								
 				const access_token = await genneralAccessToken({
 					id: user?.id,
 					isAdmin: user?.isAdmin,

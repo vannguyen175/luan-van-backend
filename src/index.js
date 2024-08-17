@@ -6,6 +6,8 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const Multer = require("multer");
 const cloudinary = require("cloudinary").v2;
+const socket = require("./config/socket");
+const { Server } = require("socket.io");
 
 //Connect Database
 db.connect();

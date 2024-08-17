@@ -3,7 +3,7 @@ const Category = require("../models/CategoryModel");
 const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
 const cloudinary = require("../config/cloundiary/cloundiary.config");
-const { Schema } = require("mongoose");
+const socket = require("../config/socket");
 
 const uploadImage = async (images) => {
 	let newImageList = [];
@@ -184,8 +184,9 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 			if (state.length > 0) {
 				query.statePost = { $in: state };
 			}
+
 			if (seller) {
-				query.seller = seller;
+				query.idUser = seller;
 			}
 			//có lọc subCate hoặc Cate (có phân trang)
 			if (subCate.length > 0 || cate.length > 0) {
@@ -203,9 +204,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 						},
 					});
 
-				products = products.filter(
-					(product) => product.subCategory && product.subCategory.category
-				);
+				products = products.filter((product) => product.subCategory && product.subCategory.category);
 				const paginatedProducts = products.slice((page - 1) * perPage, page * perPage);
 				resolve({
 					status: "OK",

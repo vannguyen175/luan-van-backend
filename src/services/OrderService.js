@@ -50,8 +50,6 @@ const createOrder = (newOrder) => {
 const getOrders = (seller, buyer, status, page, limit) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log("buyer", buyer);
-
 			const perPage = limit; //Số items trên 1 page
 
 			//kiểm tra + cập nhật trạng thái 5 phút của state "đang vận chuyển" và "đang giao hàng"
@@ -128,10 +126,12 @@ const updateOrder = (idOrder, data) => {
 					message: "Có lỗi xảy ra.",
 				});
 			} else {
+				//đơn hàng đã được người bán chấp nhận => bán thành công
 				if (data.stateOrder === "approved") {
 					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
 						selled: true,
 					});
+					await User.findOneAndUpdate({ _id: seller }, { $inc: { totalSelled: 1 } }); //tăng totalSelled thêm 1
 				} else if (data.stateOrder === "reject") {
 					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
 						selled: false,
@@ -200,7 +200,6 @@ const cancelOrder = (reason, idOrder) => {
 const analyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log(idUser);
 			if (idUser !== undefined) {
 				//thống kê cho người dùng
 				let priceBought = 0;
