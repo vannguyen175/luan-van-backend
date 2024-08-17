@@ -26,8 +26,8 @@ const getUser = (userId) => {
 };
 
 const onConnection = (socket) => {
-	productService(io, socket);
-	orderService(io, socket);
+	// productService(io, socket);
+	// orderService(io, socket);
 };
 
 io.on("connection", onConnection);

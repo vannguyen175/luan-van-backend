@@ -295,12 +295,12 @@ const getProductSeller = (id) => {
 	});
 };
 
-module.exports = {
+module.exports =  {
 	createProduct,
 	updateProduct,
 	deleteProduct,
 	getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
-	getProductSeller, //
+	getProductSeller, 
 };
