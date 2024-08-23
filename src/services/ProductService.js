@@ -1,9 +1,8 @@
 const Product = require("../models/ProductModel");
-const Category = require("../models/CategoryModel");
 const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
 const cloudinary = require("../config/cloundiary/cloundiary.config");
-const socket = require("../config/socket");
+// const httpServer  = require("http").createServer();
 
 const uploadImage = async (images) => {
 	let newImageList = [];
@@ -53,6 +52,14 @@ const createProduct = async (newProduct) => {
 	});
 };
 
+let io; //biến io đã khởi tạo ở socket.js
+let getUserSocketId; //hàm lấy socket userID
+
+const socket = (socketIO, getUserSocketIdFn) => {
+	io = socketIO;
+	getUserSocketId = getUserSocketIdFn;
+};
+
 const updateProduct = (productID, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -67,6 +74,22 @@ const updateProduct = (productID, data) => {
 				const updateProduct = await Product.findByIdAndUpdate(productID, data, {
 					new: true,
 				});
+
+				const userSocket = getUserSocketId(updateProduct.idUser);
+				console.log('userSocket', userSocket);
+				
+				if (userSocket) {
+					console.log("userSocket.socketId", userSocket.socketId);
+
+					io.to(userSocket.socketId).emit("getNotification", {
+						message: "Bài đăng của bạn đã được cập nhật.",
+						product: updateProduct._id,
+						image: updateProduct.images[0],
+						type: 0,
+					});
+					console.log("PASS SUCCESS");
+					
+				}
 
 				return resolve({
 					status: "SUCCESS",
@@ -295,12 +318,13 @@ const getProductSeller = (id) => {
 	});
 };
 
-module.exports =  {
+module.exports = {
+	socket,
 	createProduct,
 	updateProduct,
 	deleteProduct,
 	getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
-	getProductSeller, 
+	getProductSeller,
 };

@@ -14,7 +14,7 @@ let onlineUsers = [];
 
 const addNewUser = (userId, socketId) => {
 	!onlineUsers.some((user) => user.userId === userId) && onlineUsers.push({ userId, socketId });
-	console.log(onlineUsers);
+	//console.log("onlineUsers", onlineUsers);
 };
 
 const removeUser = (socketId) => {
@@ -22,13 +22,20 @@ const removeUser = (socketId) => {
 };
 
 const getUser = (userId) => {
-	return onlineUsers.find((user) => user.userId === userId);
+	return onlineUsers.find((user) => user.userId === userId.toString());
 };
 
 const onConnection = (socket) => {
-	// productService(io, socket);
-	// orderService(io, socket);
+	socket.on("newUser", (userId) => {
+		addNewUser(userId, socket.id);
+	});
+
+	socket.on("disconnect", (socket) => {
+		//removeUser(socket.id);
+	});
 };
+
+productService.socket(io, getUser);
 
 io.on("connection", onConnection);
 
@@ -36,11 +43,11 @@ io.on("connection", onConnection);
 // 	socket.on("newUser", (userId) => {
 // 		addNewUser(userId, socket.id);
 // 	});
-// 	// socket.on("sendNotification", ({ senderId, reveiverId }) => {
-// 	// 	const reveiver = getUser(reveiverId);
+// 	socket.on("sendNotification", ({ senderId, reveiverId }) => {
+// 		const reveiver = getUser(reveiverId);
 
-// 	// 	io.to(reveiver.socketId).emit("getNotification", { senderId });
-// 	// });
+// 		io.to(reveiver.socketId).emit("getNotification", { senderId });
+// 	 });
 // 	socket.on("sendNotification");
 // 	socket.on("disconnect", (socket) => {
 // 		//removeUser(socket.id);
