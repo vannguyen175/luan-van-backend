@@ -76,19 +76,16 @@ const updateProduct = (productID, data) => {
 				});
 
 				const userSocket = getUserSocketId(updateProduct.idUser);
-				console.log('userSocket', userSocket);
-				
-				if (userSocket) {
-					console.log("userSocket.socketId", userSocket.socketId);
+				console.log("userSocket", userSocket);
 
+				if (userSocket) {
 					io.to(userSocket.socketId).emit("getNotification", {
 						message: "Bài đăng của bạn đã được cập nhật.",
 						product: updateProduct._id,
 						image: updateProduct.images[0],
-						type: 0,
+						navigate: "product",
 					});
 					console.log("PASS SUCCESS");
-					
 				}
 
 				return resolve({

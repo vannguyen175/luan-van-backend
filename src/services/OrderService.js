@@ -12,6 +12,14 @@ const cancelReason = {
 	4: "Khác",
 };
 
+let io; //biến io đã khởi tạo ở socket.js
+let getUserSocketId; //hàm lấy socket userID
+
+const socket = (socketIO, getUserSocketIdFn) => {
+	io = socketIO;
+	getUserSocketId = getUserSocketIdFn;
+};
+
 const createOrder = (newOrder) => {
 	return new Promise(async (resolve, reject) => {
 		const {
@@ -66,7 +74,7 @@ const getOrders = (seller, buyer, status, page, limit) => {
 			await Order.updateMany({ status: "Giao hàng", updatedAt: { $lt: fiveMinutesAgo } }, { $set: { status: "Đã giao", updatedAt: now } });
 
 			let statusOrder = null;
-			if (status) {
+			if (status !== null) {
 				statusOrder = OrderStatus[status];
 			}
 
@@ -120,6 +128,7 @@ const updateOrder = (idOrder, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const checkOrder = await Order.findById({ _id: idOrder });
+			let imageProduct = "";
 			if (checkOrder === null) {
 				reject({
 					status: "ERROR",
@@ -127,15 +136,17 @@ const updateOrder = (idOrder, data) => {
 				});
 			} else {
 				//đơn hàng đã được người bán chấp nhận => bán thành công
-				if (data.stateOrder === "approved") {
-					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
+				if (data.status === "1") {
+					const updateProduct = await Product.findByIdAndUpdate(checkOrder.product, {
 						selled: true,
 					});
-					await User.findOneAndUpdate({ _id: seller }, { $inc: { totalSelled: 1 } }); //tăng totalSelled thêm 1
-				} else if (data.stateOrder === "reject") {
-					await Product.findByIdAndUpdate(checkOrder.orderItems.product, {
+					imageProduct = updateProduct.images[0];
+					await User.findOneAndUpdate({ _id: updateProduct.idUser }, { $inc: { totalSelled: 1 } }); //tăng totalSelled thêm 1
+				} else if (data.status === "4") {
+					const updateProduct = await Product.findByIdAndUpdate(checkOrder.product, {
 						selled: false,
 					});
+					imageProduct = updateProduct.images[0];
 				}
 				let status = checkOrder.status;
 				if (data.status) {
@@ -148,6 +159,18 @@ const updateOrder = (idOrder, data) => {
 						new: true,
 					}
 				);
+				const userSocket = getUserSocketId(updateOrder.buyer);
+				console.log(userSocket);
+
+				if (userSocket) {
+					io.to(userSocket.socketId).emit("getNotification", {
+						message: "Người bán đã chuẩn bị đơn hàng và đang vận chuyển.",
+						product: updateOrder._id,
+						image: imageProduct,
+						navigate: "order",
+					});
+					console.log("PASS SUCCESS");
+				}
 
 				return resolve({
 					status: "SUCCESS",
@@ -344,6 +367,7 @@ const ChartAnalyticOrder = (idUser) => {
 };
 
 module.exports = {
+	socket,
 	createOrder,
 	updateOrder,
 	analyticOrder,

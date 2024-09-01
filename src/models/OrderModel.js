@@ -40,6 +40,8 @@ const orderSchema = new mongoose.Schema(
 		},
 		status: { type: String, default: OrderStatus[0], required: true },
 		cancelReason: { type: String },
+		note: { type: String },
+		rating: { type: Number, default: 0 },
 	},
 	{
 		timestamps: true,

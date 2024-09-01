@@ -14,7 +14,7 @@ let onlineUsers = [];
 
 const addNewUser = (userId, socketId) => {
 	!onlineUsers.some((user) => user.userId === userId) && onlineUsers.push({ userId, socketId });
-	//console.log("onlineUsers", onlineUsers);
+	console.log("onlineUsers", onlineUsers);
 };
 
 const removeUser = (socketId) => {
@@ -36,6 +36,7 @@ const onConnection = (socket) => {
 };
 
 productService.socket(io, getUser);
+orderService.socket(io, getUser);
 
 io.on("connection", onConnection);
 

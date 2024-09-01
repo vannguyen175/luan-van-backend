@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
-const NotiType = {
-	0: "Bài đăng của bạn đã được cập nhật", //product
-	1: "Sản phẩm có người mua", //product
-	2: "Giao hàng thành công", //product
-	3: "Khách hàng đánh giá nhà bán hàng", //seller
-	4: "Nhà bán hàng đã được nâng hạng",
-};
+//dùng để frontend chuyển hướng trang khi user click vào thông báo
+// const NotiType = {
+// 	0: "product",
+// 	1: "seller",
+// 	2: "order",
+
+// };
 const notificationSchema = new mongoose.Schema(
 	{
 		user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -22,7 +22,8 @@ const notificationSchema = new mongoose.Schema(
 					ref: "Product",
 				},
 				image: { type: String },
-				type: { type: String, require: true },
+				navigate: { type: String, require: true },
+				message: { type: String, require: true },
 				isSeen: { type: Boolean, require: true, default: false },
 			},
 		], //seller, product
@@ -41,4 +42,4 @@ notificationSchema.pre("save", function (next) {
 	next();
 });
 const Notification = mongoose.model("Notification", notificationSchema);
-module.exports = { Notification, NotiType };
+module.exports = { Notification };

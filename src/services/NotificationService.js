@@ -1,13 +1,5 @@
 const { Notification, NotiType } = require("../models/NotificationModel");
 
-// const NotiType = {
-// 	0: "Bài đăng của bạn được cập nhật", //product
-// 	1: "Sản phẩm có người mua", //product
-// 	2: "Giao hàng thành công", //product
-// 	3: "Khách hàng đánh giá nhà bán hàng", //seller
-// 	4: "Nhà bán hàng đã được nâng hạng",
-// };
-
 const unSeenCount = async (user) => {
 	try {
 		const notification = await Notification.findOne({ user: user });
@@ -32,7 +24,8 @@ const addNotification = async (data) => {
 						product: data.info?.product,
 						buyer: data.info?.buyer,
 						image: data.info?.image,
-						type: NotiType[data.info.type],
+						navigate: data.info?.navigate,
+						message: data.info?.message,
 					},
 				});
 			} else {
@@ -45,7 +38,8 @@ const addNotification = async (data) => {
 								product: data.info?.product,
 								buyer: data.info?.buyer,
 								image: data.info?.image,
-								type: NotiType[data.info?.type],
+								navigate: data.info?.navigate,
+								message: data.info?.message,
 							},
 						},
 					},
@@ -53,7 +47,10 @@ const addNotification = async (data) => {
 				);
 			}
 			const unseenCount = await unSeenCount(data.user);
-			
+			//đảo ngược mới nhất xếp trước của mảng info
+			if (NotiCreated && NotiCreated.info) {
+				NotiCreated.info.reverse();
+			}
 
 			resolve({
 				status: "SUCCESS",
@@ -70,8 +67,16 @@ const addNotification = async (data) => {
 const getNotification = async (user) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			let unseenCount = 0;
 			const notification = await Notification.findOne({ user: user });
-			const unseenCount = await unSeenCount(user);
+			if (notification) {
+				unseenCount = await unSeenCount(user);
+			}
+			//đảo ngược mới nhất xếp trước của mảng info
+			if (notification && notification.info) {
+				notification.info.reverse();
+			}
+
 			resolve({
 				status: "SUCCESS",
 				message: "Lấy thông báo thành công",

@@ -172,7 +172,7 @@ const loginWithFacebook = (email, name, picture) => {
 			resolve({
 				status: "SUCCESS",
 				message: "Đăng nhập tài khoản thành công!",
-				
+
 				access_token,
 				refresh_token,
 			});
@@ -238,8 +238,8 @@ const updateUser = (userID, data) => {
 			}
 			let updateUser = {};
 			let updateAddress = {};
-			if (checkUser.password) {
-				const hash = bcrypt.hashSync(data.password, 10);
+			if (checkUser.password && data.password) {
+				//const hash = bcrypt.hashSync(data.password, 10);
 				updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
 				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
 					new: true,
@@ -349,7 +349,6 @@ const infoUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const result = await User.findById(userID);
-
 			const address = await Address.findOne({ user: userID });
 
 			const { password, ...user } = result; //destructuring
