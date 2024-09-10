@@ -3,8 +3,10 @@ const CartService = require("../services/CartService");
 //url: /sub-category/create
 const createCart = async (req, res) => {
 	try {
-		const { idUser, idProduct } = req.body;
-		if (!idProduct || !idUser) {
+		const { id, idProduct } = req.body;
+		console.log('req.body', req.body);
+		
+		if (!idProduct || !id) {
 			return res.status(200).json({
 				status: "ERR",
 				message: "The input is required",
