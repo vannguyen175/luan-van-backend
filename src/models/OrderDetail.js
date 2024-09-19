@@ -8,36 +8,27 @@ const OrderStatus = {
 	4: "Đã hủy",
 };
 
-const orderSchema = new mongoose.Schema(
+const orderDetailSchema = new mongoose.Schema(
 	{
-		product: {
+		idProduct: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Product",
 			required: true,
 		},
 
-		paymentMethod: {
-			type: String,
-			enum: ["cash", "autopay"],
+        idOrder: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Order",
+			required: true,
 		},
-		shippingDetail: {
-			email: { type: String, required: true }, //email_buyer
-			address: { type: String, required: true }, //address_buyer
-			phone: { type: Number, required: true }, //phone_buyer
-			shippingPrice: { type: Number, required: true },
-			isPaid: { type: Boolean, default: false }, //da thanh toan hay chua (đối với paymentMethod = "cash")
-			deliveredAt: { type: Date }, //thời điểm giao hàng thành công
-		},
-		buyer: {
+
+		idSeller: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 			required: true,
 		},
-		seller: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: "User",
-			required: true,
-		},
+        quantity: { type: Number, default: 0 },
+        price: { type: Number, default: 0 },
 		status: { type: String, default: OrderStatus[0], required: true },
 		cancelReason: { type: String },
 		note: { type: String },
@@ -47,5 +38,5 @@ const orderSchema = new mongoose.Schema(
 		timestamps: true,
 	}
 );
-const Order = mongoose.model("Order", orderSchema);
-module.exports = { Order, OrderStatus };
+const OrderDetail = mongoose.model("OrderDetail", orderDetailSchema);
+module.exports = { OrderDetail, OrderStatus };

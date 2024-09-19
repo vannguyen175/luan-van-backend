@@ -11,7 +11,7 @@ const io = new Server({
 
 const createProduct = async (req, res) => {
 	try {
-		const { name, images, subCategory, info, price, address } = req.body;
+		const { name, images, subCategory, info, price, address, quantity } = req.body;
 		const imageUrls = [];
 		if (images) {
 			try {
@@ -26,7 +26,7 @@ const createProduct = async (req, res) => {
 				console.log("HAVE AN ERROR =>", error);
 			}
 		}
-		if (!name || !images || !subCategory || !price || !address || !info) {
+		if (!name || !images || !subCategory || !price || !address || !info || !quantity) {
 			return res.status(200).json({
 				status: "ERROR",
 				message: "Vui lòng nhập đầy đủ thông tin",

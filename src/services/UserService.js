@@ -1,5 +1,7 @@
 const User = require("../models/UserModel");
 const Address = require("../models/AddressModel");
+const Seller = require("../models/SellerModel");
+
 const bcrypt = require("bcrypt"); //ma hoa mat khau
 const { genneralAccessToken, genneralRefreshToken } = require("./JwtService");
 
@@ -31,6 +33,7 @@ const createUser = (newUser) => {
 					user: createUser._id,
 					phone,
 				});
+				await Seller.create({ idUser: createUser._id });
 				if (createAddress) {
 					resolve({
 						status: "SUCCESS",
@@ -103,6 +106,8 @@ const loginWithGoogle = (email, name, picture) => {
 					avatar: picture,
 				});
 				await Address.create({ user: newUser._id });
+				await Seller.create({ idUser: newUser._id });
+
 				access_token = await genneralAccessToken({
 					id: newUser.id,
 					isAdmin: newUser.isAdmin,
@@ -149,6 +154,7 @@ const loginWithFacebook = (email, name, picture) => {
 					avatar: picture,
 				});
 				await Address.create({ user: newUser._id });
+				await Seller.create({ idUser: newUser._id });
 				access_token = await genneralAccessToken({
 					id: newUser.id,
 					isAdmin: newUser.isAdmin,
@@ -239,7 +245,7 @@ const updateUser = (userID, data) => {
 			let updateUser = {};
 			let updateAddress = {};
 			if (checkUser.password && data.password) {
-				//const hash = bcrypt.hashSync(data.password, 10);
+				const hash = bcrypt.hashSync(data.password, 10);
 				updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
 				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
 					new: true,
@@ -332,12 +338,14 @@ const detailUser = (userID) => {
 		try {
 			const user = await User.findById(userID);
 			const address = await Address.findOne({ user: user._id });
+			const seller = await Seller.findOne({ idUser: user._id });
 
 			resolve({
 				status: "OK",
 				message: "SUCCESS",
 				user,
 				address,
+				seller,
 			});
 		} catch (error) {
 			reject(error);
@@ -350,11 +358,13 @@ const infoUser = (userID) => {
 		try {
 			const result = await User.findById(userID);
 			const address = await Address.findOne({ user: userID });
+			const seller = await Seller.findOne({ idUser: userID });
 
 			const { password, ...user } = result; //destructuring
 			const data = {
 				...address?._doc,
 				...user._doc,
+				...seller._doc,
 			};
 
 			resolve({
@@ -363,6 +373,8 @@ const infoUser = (userID) => {
 				data,
 			});
 		} catch (error) {
+			console.log("error at infoUser", error);
+
 			reject(error);
 		}
 	});

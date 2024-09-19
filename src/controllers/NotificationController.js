@@ -35,5 +35,5 @@ const updateNotification = async (req, res) => {
 module.exports = {
 	addNotification,
 	getNotification,
-	updateNotification
+	updateNotification,
 };

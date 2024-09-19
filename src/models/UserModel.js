@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const userSchema = new mongoose.Schema(
 	{
 		name: { type: String },
@@ -7,9 +8,11 @@ const userSchema = new mongoose.Schema(
 		isAdmin: { type: Boolean, default: false, required: true },
 		access_token: { type: String, require: true },
 		refresh_token: { type: String, require: true },
+		remember_token: { type: String },
 		avatar: { type: String },
-		rating: { type: Number, required: true, default: 0 },
-		totalSelled: { type: Number, default: 0 },
+		birthday: { type: Date },
+		gender: { type: String, enum: ["Nam", "Nữ", "Khác"], },
+		avatar: { type: String },
 	},
 	{
 		new: true,

@@ -206,6 +206,7 @@ const logoutUser = async (req, res) => {
 
 const infoUser = async (req, res) => {
 	try {
+		
 		const userID = req.params.id;
 		const response = await UserService.infoUser(userID);
 		return res.status(200).json(response);

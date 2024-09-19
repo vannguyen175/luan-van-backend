@@ -13,11 +13,11 @@ const productSchema = new mongoose.Schema(
 		subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Sub_category", required: true },
 		stateProduct: {
 			type: String,
-			enum: ["new", "used"],
 		},
 		info: { type: Object, required: true },
 		price: { type: Number, required: true },
 		description: { type: String },
+		quantity: { type: Number, required: true },
 		//tỉnh,tp => quận, huyện, thị xã => phường, xã, thị trấn => địa chỉ cụ thể
 		address: {
 			province: { type: String, required: true },

@@ -87,7 +87,6 @@ const getCart = (idUser) => {
 				let productDetail;
 				for (let index = 0; index < checkCart.idProduct.length; index++) {
 					productDetail = await Product.findById(checkCart.idProduct[index]);
-					console.log('productDetail', checkCart.idProduct[index]);
 					result.push(productDetail);
 				}
 				

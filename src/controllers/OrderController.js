@@ -3,9 +3,9 @@ const OrderService = require("../services/OrderService");
 
 const createOrder = async (req, res) => {
 	try {
-		const { shippingDetail, paymentMethod } = req.body;
+		const { shippingDetail, paymentMethod, idBuyer, totalPaid } = req.body;
 
-		if (!shippingDetail || !paymentMethod) {
+		if (!shippingDetail || !paymentMethod || !idBuyer || !totalPaid) {
 			return res.status(200).json({
 				status: "ERROR",
 				message: "Vui lòng nhập đầy đủ thông tin",

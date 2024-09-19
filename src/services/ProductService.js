@@ -1,6 +1,7 @@
 const Product = require("../models/ProductModel");
 const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
+const NotificationService = require("../services/NotificationService");
 const cloudinary = require("../config/cloundiary/cloundiary.config");
 // const httpServer  = require("http").createServer();
 
@@ -38,6 +39,8 @@ const createProduct = async (newProduct) => {
 					sellerName: sellerName,
 					images: newImages,
 					info: newProduct.info,
+					stateProduct: newProduct?.stateProduct,
+					quantity: newProduct.quantity,
 				});
 				resolve({
 					status: "SUCCESS",
@@ -76,16 +79,19 @@ const updateProduct = (productID, data) => {
 				});
 
 				const userSocket = getUserSocketId(updateProduct.idUser);
-				console.log("userSocket", userSocket);
-
-				if (userSocket) {
-					io.to(userSocket.socketId).emit("getNotification", {
-						message: "Bài đăng của bạn đã được cập nhật.",
+				const addNoti = await NotificationService.addNotification({
+					user: updateProduct.idUser,
+					info: {
 						product: updateProduct._id,
 						image: updateProduct.images[0],
 						navigate: "product",
+						message: "Bài đăng của bạn đã được cập nhật.",
+					},
+				});
+				if (userSocket) {
+					io.to(userSocket.socketId).emit("getNotification", {
+						unseenCount: addNoti.unseenCount,
 					});
-					console.log("PASS SUCCESS");
 				}
 
 				return resolve({
