@@ -28,7 +28,7 @@ const orderDetailSchema = new mongoose.Schema(
 			required: true,
 		},
         quantity: { type: Number, default: 0 },
-        price: { type: Number, default: 0 },
+        productPrice: { type: Number, default: 0 },
 		status: { type: String, default: OrderStatus[0], required: true },
 		cancelReason: { type: String },
 		note: { type: String },

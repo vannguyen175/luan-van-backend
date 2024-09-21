@@ -4,40 +4,37 @@ const Order = require("../models/OrderModel");
 const User = require("../models/UserModel");
 const Cart = require("../models/CartModel");
 
-const createCart = (newCart) => {
+const createCart = (id, idProduct, quantity) => {
 	return new Promise(async (resolve, reject) => {
-		const { id, idProduct } = newCart;
-
 		try {
-			const checkCart = await Cart.findOne({ idUser: id, idProduct: idProduct });
+			const checkCart = await Cart.findOne({ idUser: id, "product.idProduct": idProduct });
 			if (checkCart) {
 				return resolve({
 					status: "EXIST",
-					message: "Sản phẩm đã được thêm vào giỏ hàng",
+					message: "Sản phẩm đã tồn tại trong giỏ hàng",
 				});
 			} else {
 				const isUserExist = await Cart.findOne({ idUser: id });
 				if (isUserExist) {
 					//nếu đã tồn tại ít nhất 1 sp trong giỏ => cập nhật
-					const result = await Cart.findOneAndUpdate(
-						{ idUser: id },
-						{ $push: { idProduct: idProduct } }
-					);
-
+					const result = await Cart.findOneAndUpdate({ idUser: id }, { $push: { product: { idProduct: idProduct, quantity: quantity } } });
 					return resolve({
 						status: "SUCCESS",
-						message: "Cập nhật cart thành công",
+						message: "Thêm giỏ hàng thành công.",
 						data: result,
 					});
 				} else {
 					//user chưa từng thêm sp vào giỏ hàng => tạo giỏ hàng
 					const result = await Cart.create({
 						idUser: id,
-						idProduct: idProduct,
+						product: {
+							idProduct: idProduct,
+							quantity: quantity,
+						},
 					});
 					return resolve({
 						status: "SUCCESS",
-						message: "Tạo cart thành công",
+						message: "Thêm giỏ hàng thành công",
 						data: result,
 					});
 				}
@@ -47,17 +44,33 @@ const createCart = (newCart) => {
 		}
 	});
 };
+const updateCart = (idUser, product) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkCart = await Cart.findOne({ idUser: idUser });
+
+			if (checkCart) {
+				const updateCart = await Cart.findOneAndUpdate({ idUser: idUser }, { $set: { product: product } }, { new: true });
+				if (updateCart) {
+					return resolve({
+						status: "SUCCESS",
+						message: "Cập nhật giỏ hàng thành công",
+						data: updateCart,
+					});
+				}
+			}
+		} catch (error) {
+			console.log(`Có lỗi ở CartService - updateCart: ${error}`);
+		}
+	});
+};
 
 const deleteCart = (idUser, idProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const checkCart = await Cart.findOne({ idUser: idUser, idProduct: idProduct });
 			if (checkCart) {
-				const result = await Cart.findOneAndUpdate(
-					{ idUser: idUser },
-					{ $pull: { idProduct: idProduct } },
-					{ new: true }
-				);
+				const result = await Cart.findOneAndUpdate({ idUser: idUser }, { $pull: { idProduct: idProduct } }, { new: true });
 
 				return resolve({
 					status: "SUCCESS",
@@ -80,20 +93,32 @@ const getCart = (idUser) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const checkCart = await Cart.findOne({ idUser: idUser });
-			console.log('checkCart', checkCart);
-			
+
 			if (checkCart) {
-				let result = [];
-				let productDetail;
-				for (let index = 0; index < checkCart.idProduct.length; index++) {
-					productDetail = await Product.findById(checkCart.idProduct[index]);
-					result.push(productDetail);
+				let productDetail = [];
+				for (let index = 0; index < checkCart.product.length; index++) {
+					const detail = await Product.findById(checkCart.product[index].idProduct);
+					if (detail) {
+						productDetail = [
+							...productDetail,
+							{
+								idProduct: detail._id,
+								name: detail.name,
+								sellerName: detail.sellerName,
+								idSeller: detail.idUser,
+								image: detail.images[0],
+								price: detail.price,
+								totalQuantity: detail.quantity,
+								quantity: checkCart.product[index].quantity,
+								statePost: detail.statePost,
+							},
+						];
+					}
 				}
-				
 				return resolve({
 					status: "SUCCESS",
 					message: "Lấy giỏ hàng thành công",
-					data: result,
+					data: productDetail,
 				});
 			} else {
 				return resolve({
@@ -102,7 +127,7 @@ const getCart = (idUser) => {
 				});
 			}
 		} catch (error) {
-			console.log(`Có lỗi ở CartService: ${error}`);
+			console.log(`Có lỗi ở getCart-Service: ${error}`);
 		}
 	});
 };
@@ -111,4 +136,5 @@ module.exports = {
 	createCart,
 	getCart,
 	deleteCart,
+	updateCart,
 };

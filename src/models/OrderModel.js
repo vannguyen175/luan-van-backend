@@ -10,11 +10,14 @@ const orderSchema = new mongoose.Schema(
 			isPaid: { type: Boolean, default: false }, //da thanh toan hay chua (đối với paymentMethod = "cash")
 			deliveredAt: { type: Date }, //thời điểm giao hàng thành công
 		},
-		buyer: {
+		idBuyer: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 			required: true,
 		},
+		totalPaid: { type: Number, required: true },
+		paymentMethod: { type: String, enum: ["cash", "vnpay"], required: true },
+		isPaid: { type: Boolean, default: false, required: true },
 	},
 	{
 		timestamps: true,

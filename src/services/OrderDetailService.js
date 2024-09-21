@@ -1,30 +1,24 @@
 const Product = require("../models/ProductModel");
-const OrderDetail = require("../models/OrderDetail");
+const OrderDetail = require("../models/OrderDetailModel");
 
-const createOrderDetail = (newOrder) => {
+const createOrderDetail = (detailOrder, idOrder) => {
 	return new Promise(async (resolve, reject) => {
-		const {
-			product, //id_product
-			shippingDetail,
-			paymentMethod,
-			buyer,
-			seller,
-		} = newOrder;
 		try {
-			await Product.findByIdAndUpdate(product, { statePost: "selled" });
-			const createOrder = await Order.create({
-				product: product,
-				shippingDetail: {
-					address: shippingDetail.address,
-					email: shippingDetail.email,
-					phone: shippingDetail.phone,
-					shippingPrice: shippingDetail.shippingPrice,
-					isPaid: paymentMethod === "autopay",
-				},
-				paymentMethod: paymentMethod,
-				buyer: buyer,
-				seller: seller,
-			});
+			for (let index = 0; index < detailOrder.length; index++) {
+				const createDetailOrder = await OrderDetail.create({
+					idOrder: idOrder,
+					idProduct: detailOrder[index].idProduct,
+					idSeller: detailOrder[index].idSeller,
+					quantity: detailOrder[index].quantity,
+					productPrice: detailOrder[index].productPrice,
+					shippingPrice: detailOrder[index].shippingPrice,
+					isPaid: detailOrder[index].isPaid,
+					note: detailOrder[index]?.note,
+				});
+				if (createDetailOrder) {
+					await Product.findByIdAndUpdate(detailOrder[index].idProduct, { statePost: "selled" });
+				}
+			}
 			return resolve({
 				status: "SUCCESS",
 				message: "Đặt hàng thành công!",

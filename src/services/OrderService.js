@@ -2,6 +2,7 @@
 const Product = require("../models/ProductModel");
 const { Order, OrderStatus } = require("../models/OrderModel");
 const User = require("../models/UserModel");
+const OrderDetailService = require("../services/OrderDetailService");
 const { default: mongoose } = require("mongoose");
 
 const cancelReason = {
@@ -23,16 +24,15 @@ const socket = (socketIO, getUserSocketIdFn) => {
 const createOrder = (newOrder) => {
 	return new Promise(async (resolve, reject) => {
 		const {
-			product, //id_product
-			shippingDetail,
+			detailOrder, //array
+			shippingDetail, //object
 			paymentMethod,
-			buyer,
-			seller,
+			idBuyer,
 		} = newOrder;
 		try {
-			await Product.findByIdAndUpdate(product, { statePost: "selled" });
+			//await Product.findByIdAndUpdate(product, { statePost: "selled" });
 			const createOrder = await Order.create({
-				product: product,
+				idBuyer: idBuyer,
 				shippingDetail: {
 					address: shippingDetail.address,
 					email: shippingDetail.email,
@@ -40,15 +40,18 @@ const createOrder = (newOrder) => {
 					shippingPrice: shippingDetail.shippingPrice,
 					isPaid: paymentMethod === "autopay",
 				},
+				totalPaid: totalPaid,
 				paymentMethod: paymentMethod,
-				buyer: buyer,
-				seller: seller,
 			});
-			return resolve({
-				status: "SUCCESS",
-				message: "Đặt hàng thành công!",
-				data: createOrder,
-			});
+
+			if (createOrder) {
+				await OrderDetailService.createOrderDetail(detailOrder, createOrder._id);
+			} else {
+				return resolve({
+					status: "ERROR",
+					message: "Có lỗi khi đặt hàng",
+				});
+			}
 		} catch (error) {
 			console.log(`Have error at createOrder service: ${error}`);
 		}
