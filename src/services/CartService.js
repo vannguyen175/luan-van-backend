@@ -67,11 +67,14 @@ const updateCart = (idUser, product) => {
 
 const deleteCart = (idUser, idProduct) => {
 	return new Promise(async (resolve, reject) => {
-		try {
-			const checkCart = await Cart.findOne({ idUser: idUser, idProduct: idProduct });
+		try {			
+			const checkCart = await Cart.findOne({ idUser: idUser, "product.idProduct": idProduct });			
 			if (checkCart) {
-				const result = await Cart.findOneAndUpdate({ idUser: idUser }, { $pull: { idProduct: idProduct } }, { new: true });
-
+				const result = await Cart.findOneAndUpdate(
+					{ idUser: idUser }, 
+					{ $pull: { product: { idProduct: idProduct } } }, // Xóa sản phẩm có idProduct từ mảng product
+					{ new: true } 
+				);
 				return resolve({
 					status: "SUCCESS",
 					message: "Xóa giỏ hàng thành công",

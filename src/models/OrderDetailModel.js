@@ -16,7 +16,7 @@ const orderDetailSchema = new mongoose.Schema(
 			required: true,
 		},
 
-        idOrder: {
+		idOrder: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Order",
 			required: true,
@@ -27,12 +27,14 @@ const orderDetailSchema = new mongoose.Schema(
 			ref: "User",
 			required: true,
 		},
-        quantity: { type: Number, default: 0 },
-        productPrice: { type: Number, default: 0 },
+		quantity: { type: Number, default: 0 },
+		productPrice: { type: Number, default: 0 },
+		shippingPrice: { type: Number, default: 0 },
 		status: { type: String, default: OrderStatus[0], required: true },
 		cancelReason: { type: String },
 		note: { type: String },
 		rating: { type: Number, default: 0 },
+		isPaid: { type: Boolean, default: false, required: true },
 	},
 	{
 		timestamps: true,

@@ -58,6 +58,7 @@ const getCart = async (req, res) => {
 const deleteCart = async (req, res) => {
 	try {
 		const { idUser, idProduct } = req.body;
+
 		if (!idUser || !idProduct) {
 			return res.status(200).json({
 				status: "ERR",

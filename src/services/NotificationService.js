@@ -17,6 +17,8 @@ const addNotification = async (data) => {
 		try {
 			let NotiCreated;
 			const isExist = await Notification.findOne({ user: data.user });
+			console.log("TEST", data);
+
 			if (isExist === null) {
 				NotiCreated = await Notification.create({
 					user: data.user,
@@ -46,6 +48,7 @@ const addNotification = async (data) => {
 					{ new: true }
 				);
 			}
+
 			const unseenCount = await unSeenCount(data.user);
 			//đảo ngược mới nhất xếp trước của mảng info
 			if (NotiCreated && NotiCreated.info) {
@@ -59,7 +62,7 @@ const addNotification = async (data) => {
 				unseenCount: unseenCount,
 			});
 		} catch (error) {
-			console.log(error);
+			console.log("Error at addNotification-service", error);
 			reject(error);
 		}
 	});

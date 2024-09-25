@@ -17,7 +17,6 @@ const orderSchema = new mongoose.Schema(
 		},
 		totalPaid: { type: Number, required: true },
 		paymentMethod: { type: String, enum: ["cash", "vnpay"], required: true },
-		isPaid: { type: Boolean, default: false, required: true },
 	},
 	{
 		timestamps: true,

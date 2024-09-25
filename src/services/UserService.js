@@ -18,28 +18,36 @@ const createUser = (newUser) => {
 					message: "Địa chỉ email đã tồn tại",
 				});
 			}
-
-			const hash = bcrypt.hashSync(password, 10);
-			const createUser = await User.create({
-				name,
-				email,
-				password: hash,
-				isAdmin,
-				avatar,
-			});
-
-			if (createUser) {
-				const createAddress = await Address.create({
-					user: createUser._id,
-					phone,
+			const checkPhone = await Address.findOne({ phone: phone });
+			if (checkPhone !== null) {
+				//email da ton tai
+				resolve({
+					status: "ERROR",
+					message: "Số điện thoại đã được đăng ký",
 				});
-				await Seller.create({ idUser: createUser._id });
-				if (createAddress) {
-					resolve({
-						status: "SUCCESS",
-						message: "SUCCESS",
-						data: createUser,
+			} else {
+				const hash = bcrypt.hashSync(password, 10);
+				const createUser = await User.create({
+					name,
+					email,
+					password: hash,
+					isAdmin,
+					avatar,
+				});
+
+				if (createUser) {
+					const createAddress = await Address.create({
+						user: createUser._id,
+						phone,
 					});
+					await Seller.create({ idUser: createUser._id });
+					if (createAddress) {
+						resolve({
+							status: "SUCCESS",
+							message: "SUCCESS",
+							data: createUser,
+						});
+					}
 				}
 			}
 		} catch (error) {
@@ -239,7 +247,14 @@ const updateUser = (userID, data) => {
 			if (checkUser === null) {
 				resolve({
 					status: "ERROR",
-					message: "User is not exists",
+					message: "Người dùng không tồn tại",
+				});
+			}
+			const checkPhoneExist = await Address.findOne({ phone: data.phone });
+			if (checkPhoneExist && checkPhoneExist?.user.toString() !== userID) {
+				resolve({
+					status: "ERROR",
+					message: "Số điện thoại đã được sử dụng",
 				});
 			}
 			let updateUser = {};

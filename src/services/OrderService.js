@@ -24,13 +24,23 @@ const socket = (socketIO, getUserSocketIdFn) => {
 const createOrder = (newOrder) => {
 	return new Promise(async (resolve, reject) => {
 		const {
-			detailOrder, //array
+			products, //array
 			shippingDetail, //object
 			paymentMethod,
 			idBuyer,
+			totalPaid,
 		} = newOrder;
 		try {
-			//await Product.findByIdAndUpdate(product, { statePost: "selled" });
+			for (let index = 0; index < products.length; index++) {
+				const productCheck = await Product.findOne({ _id: products[index].idProduct });
+				if (productCheck.quantity < products[index].quantity) {
+					return resolve({
+						status: "ERROR",
+						message: "Có lỗi khi đặt hàng. Số lượng sản phẩm trong kho không đủ.",
+					});
+				}
+			}
+
 			const createOrder = await Order.create({
 				idBuyer: idBuyer,
 				shippingDetail: {
@@ -38,14 +48,19 @@ const createOrder = (newOrder) => {
 					email: shippingDetail.email,
 					phone: shippingDetail.phone,
 					shippingPrice: shippingDetail.shippingPrice,
-					isPaid: paymentMethod === "autopay",
 				},
 				totalPaid: totalPaid,
 				paymentMethod: paymentMethod,
 			});
 
 			if (createOrder) {
-				await OrderDetailService.createOrderDetail(detailOrder, createOrder._id);
+				const response = await OrderDetailService.createOrderDetail(products, createOrder._id, paymentMethod, idBuyer);
+				if (response.status === "SUCCESS") {
+					return resolve({
+						status: "SUCCESS",
+						message: "Đặt hàng thành công!",
+					});
+				}
 			} else {
 				return resolve({
 					status: "ERROR",
