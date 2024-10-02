@@ -44,6 +44,7 @@ const updateOrderDetail = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+
 module.exports = {
 	createOrderDetail,
 	getOrdersDetail,

@@ -60,16 +60,7 @@ const cancelOrder = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
-const analyticOrder = async (req, res) => {
-	try {
-		const { idUser } = req.body;
-		const response = await OrderService.analyticOrder(idUser);
-		return res.status(200).json(response);
-	} catch (error) {
-		console.log("error at controller: ", error);
-		return res.status(404).json({ message: error });
-	}
-};
+
 const ChartAnalyticOrder = async (req, res) => {
 	try {
 		const idUser = req.params.id;
@@ -84,7 +75,6 @@ const ChartAnalyticOrder = async (req, res) => {
 module.exports = {
 	createOrder,
 	updateOrder,
-	analyticOrder,
 	ChartAnalyticOrder,
 	getOrders,
 	cancelOrder,

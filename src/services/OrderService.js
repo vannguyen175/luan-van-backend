@@ -238,87 +238,7 @@ const cancelOrder = (reason, idOrder) => {
 	});
 };
 
-const analyticOrder = (idUser) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			if (idUser !== undefined) {
-				//thống kê cho người dùng
-				let priceBought = 0;
-				const listProductBought = await Order.find({
-					buyer: idUser,
-					stateOrder: "approved",
-				});
-				if (listProductBought) {
-					for (let index = 0; index < listProductBought.length; index++) {
-						priceBought = priceBought + listProductBought[index].totalPrice;
-					}
-				}
 
-				const listProductWaiting = await Order.find({
-					buyer: idUser,
-					stateOrder: "waiting",
-				});
-
-				let priceSelled = 0;
-				const listProductSelled = await Order.find({
-					seller: idUser,
-					stateOrder: "approved",
-				});
-				if (listProductSelled) {
-					for (let index = 0; index < listProductSelled.length; index++) {
-						priceSelled = priceSelled + listProductSelled[index].totalPrice;
-					}
-				}
-				const listOrderWaiting = await Order.find({
-					seller: idUser,
-					stateOrder: "waiting",
-				});
-
-				return resolve({
-					status: "OK",
-					message: "SUCCESS",
-					listProductBought,
-					priceBought,
-					listProductSelled,
-					priceSelled,
-					listProductWaiting, //đơn hàng chờ seller duyệt của người mua
-					listOrderWaiting,
-				});
-			} else {
-				//thống kê cho quản trị viên
-				let priceSelled = 0;
-				const listOrderSelled = await Order.find({ stateOrder: "approved" });
-				//const listProductSelling = await Product.find({ selled: { $ne: "true" } });
-				const listProductSelling = await Product.find({
-					statePost: "approved",
-					selled: "false",
-				});
-
-				const listProductWaiting = await Product.find({
-					statePost: "waiting",
-				});
-
-				if (listOrderSelled) {
-					for (let index = 0; index < listOrderSelled.length; index++) {
-						priceSelled = priceSelled + listOrderSelled[index].totalPrice;
-					}
-				}
-
-				return resolve({
-					status: "OK",
-					message: "SUCCESS",
-					listOrderSelled,
-					listProductSelling,
-					listProductWaiting,
-					priceSelled,
-				});
-			}
-		} catch (error) {
-			console.log("error", error);
-			reject(error);
-		}
-	});
-};
 
 const ChartAnalyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {
@@ -388,7 +308,6 @@ module.exports = {
 	socket,
 	createOrder,
 	updateOrder,
-	analyticOrder,
 	ChartAnalyticOrder,
 	getOrders,
 	cancelOrder,
