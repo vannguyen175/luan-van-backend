@@ -21,7 +21,6 @@ const createSubCategory = async (req, res) => {
 const createInfoSubCate = async (req, res) => {
 	try {
 		const { name, info, option } = req.body; //slug category
-		console.log('req', req.body);
 		if (!name || !info || !option) {
 			return res.status(200).json({
 				status: "ERR",
@@ -29,6 +28,22 @@ const createInfoSubCate = async (req, res) => {
 			});
 		}
 		const response = await SubCategoryService.createInfoSubCate(name, info, option);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+const updateOption = async (req, res) => {
+	try {
+		const { slug, info, options } = req.body; //slug category
+		if (!slug || !info || !options) {
+			return res.status(200).json({
+				status: "ERR",
+				message: "Nhập thiếu dữ liệu",
+			});
+		}
+		const response = await SubCategoryService.updateOption(slug, info, options);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
@@ -95,6 +110,17 @@ const detailSubCategory = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const deleteInfo = async (req, res) => {
+	try {
+		const slug = req.params.slug;
+		const nameInfo = req.params.nameInfo;
+
+		const response = await SubCategoryService.deleteInfo(slug, nameInfo);
+		return res.status(200).json(response);
+	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
 const getAllSubCategory = async (req, res) => {
 	try {
 		const response = await SubCategoryService.getAllSubCategory();
@@ -111,5 +137,7 @@ module.exports = {
 	detailSubCategory,
 	getOptionSubCategory,
 	createInfoSubCate,
-	getAllSubCategory
+	getAllSubCategory,
+	deleteInfo,
+	updateOption
 };

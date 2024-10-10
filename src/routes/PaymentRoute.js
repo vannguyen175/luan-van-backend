@@ -27,23 +27,25 @@ router.get("/refund", function (req, res, next) {
 });
 
 router.post("/create_payment_url", function (req, res, next) {
-	process.env.TZ = "Asia/Ho_Chi_Minh";
-
-	let date = new Date();
-	let createDate = moment(date).format("YYYYMMDDHHmmss");
-
 	let ipAddr = req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
 
-	let config = require("config");
+	let config = require("../config/default.json");
+	// var dateFormat = require('dateformat');
 
-	let tmnCode = config.get("vnp_TmnCode");
-	let secretKey = config.get("vnp_HashSecret");
-	let vnpUrl = config.get("vnp_Url");
-	let returnUrl = config.get("vnp_ReturnUrl");
-	let orderId = moment(date).format("DDHHmmss");
+	let tmnCode = "CGXZLS0Z";
+	let secretKey = "XNBCJFAKAZQSGTARRLGCHVZWCIOIGSHN";
+	let vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+	let returnUrl = "http://localhost:3006/payment-vnpay/result";
+
+	var date = new Date();
+	let createDate = moment(date).format("YYYYMMDDHHmmss");
+	// var createDate = dateFormat(date, 'yyyymmddHHmmss');
+	var orderId = moment(date).format("DDHHmmss");
 	let amount = req.body.amount;
-	let bankCode = req.body.bankCode;
+	var bankCode = req.body.bankCode;
 
+	var orderInfo = "Noi dung thanh toan";
+	var orderType = "billpayment";
 	let locale = req.body.language;
 	if (locale === null || locale === "") {
 		locale = "vn";
@@ -63,20 +65,20 @@ router.post("/create_payment_url", function (req, res, next) {
 	vnp_Params["vnp_IpAddr"] = ipAddr;
 	vnp_Params["vnp_CreateDate"] = createDate;
 	if (bankCode !== null && bankCode !== "") {
+		console.log("bankCode", bankCode);
 		vnp_Params["vnp_BankCode"] = bankCode;
 	}
 
 	vnp_Params = sortObject(vnp_Params);
-
 	let querystring = require("qs");
 	let signData = querystring.stringify(vnp_Params, { encode: false });
 	let crypto = require("crypto");
 	let hmac = crypto.createHmac("sha512", secretKey);
-	let signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+	let signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 	vnp_Params["vnp_SecureHash"] = signed;
 	vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
-
-	res.redirect(vnpUrl);
+	// res.redirect(vnpUrl);
+	res.status(200).json({ redirect: vnpUrl });
 });
 
 router.get("/vnpay_return", function (req, res, next) {
@@ -97,7 +99,7 @@ router.get("/vnpay_return", function (req, res, next) {
 	let signData = querystring.stringify(vnp_Params, { encode: false });
 	let crypto = require("crypto");
 	let hmac = crypto.createHmac("sha512", secretKey);
-	let signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+	let signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
 	if (secureHash === signed) {
 		//Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
@@ -108,6 +110,7 @@ router.get("/vnpay_return", function (req, res, next) {
 	}
 });
 
+//Thông tin nhận về từ VNPAY
 router.get("/vnpay_ipn", function (req, res, next) {
 	let vnp_Params = req.query;
 	let secureHash = vnp_Params["vnp_SecureHash"];
@@ -125,7 +128,7 @@ router.get("/vnpay_ipn", function (req, res, next) {
 	let signData = querystring.stringify(vnp_Params, { encode: false });
 	let crypto = require("crypto");
 	let hmac = crypto.createHmac("sha512", secretKey);
-	let signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+	let signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
 	let paymentStatus = "0"; // Giả sử '0' là trạng thái khởi tạo giao dịch, chưa có IPN. Trạng thái này được lưu khi yêu cầu thanh toán chuyển hướng sang Cổng thanh toán VNPAY tại đầu khởi tạo đơn hàng.
 	//let paymentStatus = '1'; // Giả sử '1' là trạng thái thành công bạn cập nhật sau IPN được gọi và trả kết quả về nó
@@ -133,6 +136,7 @@ router.get("/vnpay_ipn", function (req, res, next) {
 
 	let checkOrderId = true; // Mã đơn hàng "giá trị của vnp_TxnRef" VNPAY phản hồi tồn tại trong CSDL của bạn
 	let checkAmount = true; // Kiểm tra số tiền "giá trị của vnp_Amout/100" trùng khớp với số tiền của đơn hàng trong CSDL của bạn
+
 	if (secureHash === signed) {
 		//kiểm tra checksum
 		if (checkOrderId) {
@@ -164,6 +168,7 @@ router.get("/vnpay_ipn", function (req, res, next) {
 	}
 });
 
+//truy vấn giao dịch
 router.post("/querydr", function (req, res, next) {
 	process.env.TZ = "Asia/Ho_Chi_Minh";
 	let date = new Date();
@@ -209,7 +214,7 @@ router.post("/querydr", function (req, res, next) {
 		vnp_OrderInfo;
 
 	let hmac = crypto.createHmac("sha512", secretKey);
-	let vnp_SecureHash = hmac.update(new Buffer(data, "utf-8")).digest("hex");
+	let vnp_SecureHash = hmac.update(Buffer.from(data, "utf-8")).digest("hex");
 
 	let dataObj = {
 		vnp_RequestId: vnp_RequestId,
@@ -295,7 +300,7 @@ router.post("/refund", function (req, res, next) {
 		"|" +
 		vnp_OrderInfo;
 	let hmac = crypto.createHmac("sha512", secretKey);
-	let vnp_SecureHash = hmac.update(new Buffer(data, "utf-8")).digest("hex");
+	let vnp_SecureHash = hmac.update(Buffer.from(data, "utf-8")).digest("hex");
 
 	let dataObj = {
 		vnp_RequestId: vnp_RequestId,

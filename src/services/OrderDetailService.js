@@ -52,7 +52,7 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 				await CartService.deleteCart(idBuyer, products[index].idProduct);
 			}
 			return resolve({
-				status: "SUCCESS",
+				status: "success",
 				message: "Đặt hàng thành công!",
 			});
 		} catch (error) {

@@ -10,22 +10,22 @@ const createSubCategory = (name, slug) => {
 
 			if (checkCategory === null) {
 				return resolve({
-					status: "OK",
-					message: "Category is not exists",
+					status: "ERROR",
+					message: "Danh mục chính không tồn tại",
 				});
 			}
 			const checkSubCategory = await SubCategory.findOne({ name: name });
 
 			if (checkSubCategory) {
 				return resolve({
-					status: "OK",
-					message: "SubCategory is already exists",
+					status: "ERROR",
+					message: "Danh mục phụ đã tồn tại",
 				});
 			}
 
 			const createSubCategory = await SubCategory.create({
 				name: name,
-				category: checkCategory._id,
+				category: checkCategory.slug,
 			});
 			if (createSubCategory) {
 				return resolve({
@@ -46,11 +46,14 @@ const createInfoSubCate = (name, info, option) => {
 	//slug: category's slug
 	return new Promise(async (resolve, reject) => {
 		try {
-			const checkSubCategory = await SubCategory.findOne({ name: info });
-			if (!checkSubCategory) {
+			const checkExists = await SubCategory.findOne({
+				name: info,
+				"infoSubCate.name": name,
+			});
+			if (checkExists) {
 				return resolve({
-					status: "OK",
-					message: "SubCategory is not exists",
+					status: "ERROR",
+					message: "Tên mô tả đã tồn tại",
 				});
 			} else {
 				const createInfo = await SubCategory.findOneAndUpdate(
@@ -177,7 +180,7 @@ const deleteSubCategory = (slug) => {
 			if (checkExists === null) {
 				resolve({
 					status: "ERROR",
-					message: "Sub-category is not exists",
+					message: "Danh mục phụ không tồn tại",
 				});
 			}
 			const deleteSubCategory = await SubCategory.findOneAndDelete({
@@ -186,7 +189,35 @@ const deleteSubCategory = (slug) => {
 			if (deleteSubCategory) {
 				resolve({
 					status: "SUCCESS",
-					message: "Delete sub-category successfully",
+					message: "Xóa danh mục phụ thành công",
+				});
+			}
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
+
+const deleteInfo = (slug, nameInfo) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkExists = await SubCategory.findOne({
+				slug: slug,
+				"infoSubCate.name": nameInfo,
+			});
+			if (checkExists === null) {
+				resolve({
+					status: "ERROR",
+					message: "Tên mô tả không tồn tại",
+				});
+			}
+			const deleteInfo = await SubCategory.updateOne({ slug: slug }, { $pull: { infoSubCate: { name: nameInfo } } });
+
+			if (deleteInfo) {
+				resolve({
+					status: "SUCCESS",
+					message: "Xóa danh mục phụ thành công",
 				});
 			}
 		} catch (error) {
@@ -240,7 +271,36 @@ const getAllSubCategory = (slug) => {
 		}
 	});
 };
-
+const updateOption = (slug, info, options) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkExist = await SubCategory.findOne({
+				slug: slug,
+				"infoSubCate.name": info,
+			});
+			if (checkExist === null) {
+				return resolve({
+					status: "ERROR",
+					message: "Thông tin mô tả không tồn tại.",
+				});
+			} else {
+				const replaceOptions = await SubCategory.updateOne(
+					{ slug: slug, "infoSubCate.name": info }, // Điều kiện lọc
+					{ $set: { "infoSubCate.$.option": options } } // Thay thế toàn bộ mảng option
+				);
+				if (replaceOptions) {
+					return resolve({
+						status: "SUCCESS",
+						message: "Cập nhật lựa chọn thành công!",
+					});
+				}
+			}
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
 module.exports = {
 	createSubCategory,
 	updateSubCategory,
@@ -249,4 +309,6 @@ module.exports = {
 	getOptionSubCategory,
 	createInfoSubCate,
 	getAllSubCategory,
+	deleteInfo,
+	updateOption,
 };

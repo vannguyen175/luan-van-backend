@@ -7,6 +7,7 @@ const cartRoute = require("./CartRoute");
 const notificationRoute = require("./NotificationRoute");
 const orderDetailRoute = require("./OrderDetailRoute");
 const analyticRoute = require("./AnalyticRoute")
+const paymentRoute = require("./PaymentRoute")
 
 const routes = (app) => {
 	app.use("/api/user", userRoute);
@@ -18,6 +19,7 @@ const routes = (app) => {
 	app.use("/api/notification", notificationRoute);
 	app.use("/api/order-detail", orderDetailRoute);
 	app.use("/api/analytic", analyticRoute);
+	app.use("/api/payment", paymentRoute);
 };
 
 module.exports = routes;

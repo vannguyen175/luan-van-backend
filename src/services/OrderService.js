@@ -35,7 +35,7 @@ const createOrder = (newOrder) => {
 				const productCheck = await Product.findOne({ _id: products[index].idProduct });
 				if (productCheck.quantity < products[index].quantity) {
 					return resolve({
-						status: "ERROR",
+						status: "error",
 						message: "Có lỗi khi đặt hàng. Số lượng sản phẩm trong kho không đủ.",
 					});
 				}
@@ -55,16 +55,16 @@ const createOrder = (newOrder) => {
 
 			if (createOrder) {
 				const response = await OrderDetailService.createOrderDetail(products, createOrder._id, paymentMethod, idBuyer);
-				if (response.status === "SUCCESS") {
+				if (response.status === "success") {
 					return resolve({
-						status: "SUCCESS",
+						status: "success",
 						message: "Đặt hàng thành công!",
 					});
 				}
 			} else {
 				return resolve({
-					status: "ERROR",
-					message: "Có lỗi khi đặt hàng",
+					status: "error",
+					message: "Có lỗi khi đặt hàng. Vui lòng thử lại.",
 				});
 			}
 		} catch (error) {
@@ -237,8 +237,6 @@ const cancelOrder = (reason, idOrder) => {
 		}
 	});
 };
-
-
 
 const ChartAnalyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {

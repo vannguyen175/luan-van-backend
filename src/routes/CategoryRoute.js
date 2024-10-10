@@ -3,7 +3,8 @@ const router = express.Router();
 const categoryController = require("../controllers/CategoryController");
 const { authMiddleware } = require("../config/middleware/authMiddleware");
 
-router.get("/create", categoryController.createCategory);
+router.post("/create", categoryController.createCategory);
+router.get("/search/:search", categoryController.searchCategory);
 router.put("/update/:slug", categoryController.updateCategory);
 router.delete("/delete/:slug", categoryController.deleteCategory);
 router.get("/getAll", categoryController.getAllCategory);

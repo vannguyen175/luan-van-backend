@@ -10,7 +10,11 @@ const productSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		sellerName: { type: String, required: true },
 		images: [],
-		subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Sub_category", required: true },
+		// category: {
+		// 	cate: { type: String, required: true }, //slug
+		// 	subCate: { type: String, required: true }, //slug
+		// },
+		subCategory: { type: String, required: true },
 		stateProduct: {
 			type: String,
 		},
