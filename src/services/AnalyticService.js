@@ -148,6 +148,9 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
 					status: OrderStatus[3],
 				}).select("updatedAt");
+
+				console.log(allOrders);
+				
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
 						const orderCheck = new Date(item.updatedAt);

@@ -10,10 +10,6 @@ const productSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		sellerName: { type: String, required: true },
 		images: [],
-		// category: {
-		// 	cate: { type: String, required: true }, //slug
-		// 	subCate: { type: String, required: true }, //slug
-		// },
 		subCategory: { type: String, required: true },
 		stateProduct: {
 			type: String,
@@ -41,6 +37,7 @@ const productSchema = new mongoose.Schema(
 		timestamps: true,
 	}
 );
+
 const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;

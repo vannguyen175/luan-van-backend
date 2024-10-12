@@ -13,7 +13,7 @@ const sub_categorySchema = new mongoose.Schema(
 			},
 		],
 		category: {
-			type: String,
+			type: String, //slug
 			required: true,
 		},
 	},

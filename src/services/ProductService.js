@@ -215,21 +215,22 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 				query.idUser = seller;
 			}
 			//có lọc subCate hoặc Cate (có phân trang)
+
 			if (subCate.length > 0 || cate.length > 0) {
 				let products = await Product.find(query)
 					.sort({ _id: 1 }) //lấy dữ liệu mới nhất
 					.populate({
 						path: "subCategory",
+						model: "Sub_category",
+						foreignField: "slug",
 						match: subCate.length > 0 ? { name: { $in: subCate } } : {},
-						select: "name",
 						populate: {
 							path: "category",
-							match: cate.length > 0 ? { name: { $in: cate } } : {},
-							select: "name",
 							model: "Category",
+							foreignField: "slug",
+							match: cate.length > 0 ? { name: { $in: cate } } : {},
 						},
 					});
-
 				products = products.filter((product) => product.subCategory && product.subCategory.category);
 				const paginatedProducts = products.slice((page - 1) * perPage, page * perPage);
 				resolve({
@@ -247,11 +248,12 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 					.limit(perPage)
 					.populate({
 						path: "subCategory",
-						select: "name",
+						model: "Sub_category",
+						foreignField: "slug",
 						populate: {
 							path: "category",
-							select: "name",
 							model: "Category",
+							foreignField: "slug",
 						},
 					});
 				resolve({
@@ -272,11 +274,12 @@ const detailProduct = (id) => {
 		try {
 			const result = await Product.findById({ _id: id }).populate({
 				path: "subCategory",
-				select: "name",
+				model: "Sub_category",
+				foreignField: "slug",
 				populate: {
 					path: "category",
-					select: "name",
 					model: "Category",
+					foreignField: "slug",
 				},
 			});
 			if (result === null) {

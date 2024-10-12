@@ -27,7 +27,7 @@ const analyticOrder = async (req, res) => {
 				message: "Vui lòng nhập đầy đủ thông tin",
 			});
 		}
-		const response = await AnalyticService.analyticOrderAdmin(idSeller, typeDate, startDay);
+		const response = await AnalyticService.analyticOrder(idSeller, typeDate, startDay);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
