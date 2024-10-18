@@ -4,7 +4,7 @@ const orderDetailController = require("../controllers/OrderDetailController");
 
 router.post("/create", orderDetailController.createOrderDetail);
 router.post("/getAll", orderDetailController.getOrdersDetail);
-// router.post("/cancel", orderController.cancelOrder);
+router.post("/cancel", orderDetailController.cancelOrder);
 router.put("/update/:id", orderDetailController.updateOrderDetail); //đơn hàng đã bán của người bán
 // router.post("/analytics", orderController.analyticOrder);
 // router.get("/chart-analytics/:id", orderController.ChartAnalyticOrder);

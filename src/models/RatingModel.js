@@ -4,12 +4,17 @@ const ratingSchema = new mongoose.Schema(
 	{
 		idOrder: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: "Order",
+			ref: "OrderDetail",
 			required: true,
 		},
 		idBuyer: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
+			required: true,
+		},
+		idSeller: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Seller",
 			required: true,
 		},
 		idProduct: {

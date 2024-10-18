@@ -240,7 +240,7 @@ const detailSubCategory = (slug) => {
 			}
 
 			if (detailSubCategory) {
-				const category = await Category.findById(detailSubCategory.category);
+				const category = await Category.findOne({ slug: detailSubCategory.category });
 				return resolve({
 					status: "SUCCESS",
 					message: "Get details sub-category successfully",

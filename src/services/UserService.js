@@ -1,6 +1,9 @@
 const User = require("../models/UserModel");
 const Address = require("../models/AddressModel");
 const Seller = require("../models/SellerModel");
+const Rating = require("../models/RatingModel");
+
+const mongoose = require("mongoose");
 
 const bcrypt = require("bcrypt"); //ma hoa mat khau
 const { genneralAccessToken, genneralRefreshToken } = require("./JwtService");
@@ -259,28 +262,27 @@ const updateUser = (userID, data) => {
 			}
 			let updateUser = {};
 			let updateAddress = {};
-			if (checkUser.password && data.password) {
+			if (data.password) {
+				//TH1: create password 	TH2: update password
 				const hash = bcrypt.hashSync(data.password, 10);
 				updateUser = await User.findByIdAndUpdate(userID, { ...data, password: hash }, { new: true });
 				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
 					new: true,
 				});
-			} else if (checkAddress) {
-				updateUser = await User.findByIdAndUpdate(userID, { ...data }, { new: true });
-				updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
-					new: true,
-				});
 			} else {
-				updateUser = await User.findByIdAndUpdate(userID, { ...data }, { new: true });
-				try {
+				//User không nhập password => giữ pass cũ
+				if (checkAddress) {
+					//tồn tại checkAddress (register thủ công)
+					updateUser = await User.findByIdAndUpdate(userID, { ...data, password: checkUser.password }, { new: true });
+					updateAddress = await Address.findOneAndUpdate({ user: userID }, data, {
+						new: true,
+					});
+				} else {
+					//chưa có checkAddress (user đăng ký qua google, fb)
+					updateUser = await User.findByIdAndUpdate(userID, { ...data, password: checkUser.password }, { new: true });
 					updateAddress = await Address.create({
 						user: userID,
 						...data,
-					});
-				} catch (error) {
-					resolve({
-						status: "ERROR",
-						message: "Số điện thoại đã có người đăng ký",
 					});
 				}
 			}
@@ -320,34 +322,56 @@ const deleteUser = (userID) => {
 	});
 };
 
-const getAllUsers = (role) => {
+const getAllUsers = (role, page, limit) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			let data = {};
-
-			if (role === "user") {
-				data = await Address.find().populate({
-					path: "user",
-					match: { isAdmin: false },
-				});
-			} else {
-				data = await Address.find().populate({
-					path: "user",
-					match: { isAdmin: true },
-				});
-			}
-			const result = data.filter((value) => value.user !== null);
+			const perPage = limit; //Số items trên 1 page
+			let result = await Address.find({}).populate({
+				path: "user",
+				match: { isAdmin: role === "admin" },
+			});
+			
+			result = result.filter((res) => res.user);
+			const paginatedResult = result.slice((page - 1) * perPage, page * perPage);
 			resolve({
 				status: "SUCCESS",
 				message: "SUCCESS",
-				data: result,
+				data: paginatedResult,
+				totalCount: result.length,
 			});
 		} catch (error) {
+			console.log("Error at getAllUsers", error);
 			reject(error);
 		}
 	});
 };
 
+const getAllSellers = (page, limit) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const perPage = limit; //Số items trên 1 page
+			let result = await Seller.find({}).populate({
+				path: "idUser",
+				match: { isAdmin: false },
+				select: "name email avatar",
+			});
+			result = result.filter((res) => res.idUser);
+			const paginatedResult = result.slice((page - 1) * perPage, page * perPage);
+
+			resolve({
+				status: "SUCCESS",
+				message: "SUCCESS",
+				data: paginatedResult,
+				totalCount: result.length,
+			});
+		} catch (error) {
+			console.log("Have error at getAllSellers service", error);
+			reject(error);
+		}
+	});
+};
+
+//thông tin chi tiết của người dùng (chỉ chính chủ hoặc admin mới có thể xem được)
 const detailUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -368,25 +392,67 @@ const detailUser = (userID) => {
 	});
 };
 
+//thông tin cơ bản của người dùng
 const infoUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const result = await User.findById(userID);
+
 			const address = await Address.findOne({ user: userID });
 			const seller = await Seller.findOne({ idUser: userID });
+			const rating = await Rating.find({ idSeller: userID })
+				.select("score review")
+				.populate({
+					path: "idProduct",
+					select: "images name",
+				})
+				.populate({
+					path: "idBuyer",
+					select: "name avatar",
+				});
 
-			const { password, ...user } = result; //destructuring
-			const data = {
-				...address?._doc,
-				...user._doc,
-				...seller._doc,
-			};
+			const avgRating = await Rating.aggregate([
+				{
+					$match: { idSeller: new mongoose.Types.ObjectId(userID) },
+				},
+				{
+					$group: {
+						_id: "$idSeller", // Nhóm theo idSeller
+						averageRating: { $avg: "$score" }, // Tính trung bình của trường score
+						totalReviews: { $sum: 1 }, // Đếm tổng số đánh giá
+					},
+				},
+			]);
 
-			resolve({
-				status: "OK",
-				message: "SUCCESS",
-				data,
-			});
+			if (result?.password) {
+				const { password, ...user } = result; //destructuring
+				const data = {
+					...address?._doc,
+					...result._doc,
+					...seller._doc,
+					rating,
+					avgRating,
+				};
+				resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data,
+				});
+			} else {
+				const data = {
+					...address?._doc,
+					...result._doc,
+					...seller._doc,
+					rating,
+					avgRating,
+				};
+
+				resolve({
+					status: "OK",
+					message: "SUCCESS",
+					data,
+				});
+			}
 		} catch (error) {
 			console.log("error at infoUser", error);
 
@@ -440,4 +506,5 @@ module.exports = {
 	infoUser,
 	searchUser,
 	loginWithFacebook,
+	getAllSellers,
 };

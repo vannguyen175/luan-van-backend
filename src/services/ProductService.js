@@ -25,22 +25,20 @@ const uploadImage = async (images) => {
 const createProduct = async (newProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const sellerDetail = await User.findOne({ _id: newProduct.idUser });
 			const data_subCategory = await SubCategory.find({ slug: newProduct.subCategory });
-			const sellerName = sellerDetail.name;
 			const newImages = await uploadImage(newProduct.images);
 			if (newImages) {
 				const createProduct = await Product.create({
-					subCategory: data_subCategory[0]._id,
+					subCategory: data_subCategory[0].slug,
 					name: newProduct.name,
 					price: newProduct.price,
 					idUser: newProduct.idUser,
 					address: newProduct.address,
-					sellerName: sellerName,
 					images: newImages,
 					info: newProduct.info,
 					stateProduct: newProduct?.stateProduct,
 					quantity: newProduct.quantity,
+					statePost: newProduct.totalSold >= 2 ? "approved" : "waiting",
 				});
 				resolve({
 					status: "SUCCESS",
@@ -218,7 +216,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 
 			if (subCate.length > 0 || cate.length > 0) {
 				let products = await Product.find(query)
-					.sort({ _id: 1 }) //lấy dữ liệu mới nhất
+					.sort({ _id: -1 }) //lấy dữ liệu mới nhất
 					.populate({
 						path: "subCategory",
 						model: "Sub_category",
@@ -230,6 +228,10 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 							foreignField: "slug",
 							match: cate.length > 0 ? { name: { $in: cate } } : {},
 						},
+					})
+					.populate({
+						path: "idUser", //idSeller
+						select: "name",
 					});
 				products = products.filter((product) => product.subCategory && product.subCategory.category);
 				const paginatedProducts = products.slice((page - 1) * perPage, page * perPage);
@@ -243,7 +245,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 				//lấy tất cả dữ liệu (có phân trang)
 				const totalPages = await Product.countDocuments(query);
 				const products = await Product.find(query)
-					.sort({ _id: 1 }) //lấy dữ liệu mới nhất
+					.sort({ _id: -1 }) //lấy dữ liệu mới nhất
 					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
 					.limit(perPage)
 					.populate({
@@ -255,6 +257,10 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 							model: "Category",
 							foreignField: "slug",
 						},
+					})
+					.populate({
+						path: "idUser", //idSeller
+						select: "name",
 					});
 				resolve({
 					status: "OK",
@@ -272,20 +278,26 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 const detailProduct = (id) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const result = await Product.findById({ _id: id }).populate({
-				path: "subCategory",
-				model: "Sub_category",
-				foreignField: "slug",
-				populate: {
-					path: "category",
-					model: "Category",
+			const result = await Product.findById({ _id: id })
+				.populate({
+					path: "subCategory",
+					model: "Sub_category",
 					foreignField: "slug",
-				},
-			});
+					populate: {
+						path: "category",
+						model: "Category",
+						foreignField: "slug",
+					},
+				})
+				.populate({
+					path: "idUser", //idSeller
+					select: "name",
+				});
+
 			if (result === null) {
 				return resolve({
 					status: "ERROR",
-					message: "Product's ID is not exist",
+					message: "Có lỗi khi lấy dữ liệu",
 				});
 			} else {
 				return resolve({
@@ -295,7 +307,7 @@ const detailProduct = (id) => {
 				});
 			}
 		} catch (error) {
-			console.log(error);
+			console.log("Error at detailProduct service", error);
 			reject(error);
 		}
 	});

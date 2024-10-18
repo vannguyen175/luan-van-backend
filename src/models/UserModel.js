@@ -9,9 +9,9 @@ const userSchema = new mongoose.Schema(
 		access_token: { type: String, require: true },
 		refresh_token: { type: String, require: true },
 		remember_token: { type: String },
-		avatar: { type: String },
+		avatar: { type: String, require: true, default: "assets/images/user-avatar.jpg" },
 		birthday: { type: Date },
-		gender: { type: String, enum: ["Nam", "Nữ", "Khác"], },
+		gender: { type: String, enum: ["Nam", "Nữ", "Khác"] },
 		avatar: { type: String },
 	},
 	{

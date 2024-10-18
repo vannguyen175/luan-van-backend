@@ -4,14 +4,9 @@ const { Order, OrderStatus } = require("../models/OrderModel");
 const User = require("../models/UserModel");
 const OrderDetailService = require("../services/OrderDetailService");
 const { default: mongoose } = require("mongoose");
+const Rating = require("../models/RatingModel");
 
-const cancelReason = {
-	0: "Muốn thay đổi địa chỉ giao hàng",
-	1: "Tìm thấy giá rẻ hơn ở chỗ khác",
-	2: "Thủ tục thanh toán rắc rối",
-	3: "Thay đổi ý",
-	4: "Khác",
-};
+
 
 let io; //biến io đã khởi tạo ở socket.js
 let getUserSocketId; //hàm lấy socket userID
@@ -114,7 +109,8 @@ const getOrders = (seller, buyer, status, page, limit) => {
 					.populate({
 						path: "buyer",
 						select: "avatar name",
-					});
+					})
+					
 			} else {
 				//lấy đơn hàng theo người mua
 				orders = await Order.find({ buyer: buyer, status: statusOrder })
@@ -128,8 +124,10 @@ const getOrders = (seller, buyer, status, page, limit) => {
 							path: "subCategory",
 							select: "name",
 						},
-					});
+					})
+				
 			}
+
 			resolve({
 				status: "SUCCESS",
 				message: "Lấy đơn hàng thành công!",
@@ -178,7 +176,6 @@ const updateOrder = (idOrder, data) => {
 					}
 				);
 				const userSocket = getUserSocketId(updateOrder.buyer);
-				console.log(userSocket);
 
 				if (userSocket) {
 					io.to(userSocket.socketId).emit("getNotification", {
@@ -187,7 +184,6 @@ const updateOrder = (idOrder, data) => {
 						image: imageProduct,
 						navigate: "order",
 					});
-					console.log("PASS SUCCESS");
 				}
 
 				return resolve({
@@ -203,40 +199,6 @@ const updateOrder = (idOrder, data) => {
 	});
 };
 
-const cancelOrder = (reason, idOrder) => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const checkOrder = await Order.findById({ _id: idOrder });
-			if (checkOrder === null) {
-				reject({
-					status: "ERROR",
-					message: "Đơn hàng không tồn tại",
-				});
-			} else {
-				await Product.findByIdAndUpdate({ _id: checkOrder.product }, { statePost: "approved" });
-				const updateOrder = await Order.findByIdAndUpdate(
-					idOrder,
-					{
-						status: OrderStatus[4], //status: đã hủy
-						cancelReason: cancelReason[reason],
-					},
-					{
-						new: true,
-					}
-				);
-
-				return resolve({
-					status: "SUCCESS",
-					message: "Hủy đơn hàng thành công",
-					data: updateOrder,
-				});
-			}
-		} catch (error) {
-			console.log("error", error);
-			reject(error);
-		}
-	});
-};
 
 const ChartAnalyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {
@@ -308,5 +270,5 @@ module.exports = {
 	updateOrder,
 	ChartAnalyticOrder,
 	getOrders,
-	cancelOrder,
+
 };

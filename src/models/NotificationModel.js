@@ -35,9 +35,9 @@ const notificationSchema = new mongoose.Schema(
 );
 // Middleware để giới hạn số lượng phần tử trong mảng
 notificationSchema.pre("save", function (next) {
-	// Giới hạn mảng 'info' chỉ có tối đa 10 phần tử
-	if (this.info.length > 10) {
-		this.info = this.info.slice(-10);
+	// Giới hạn mảng 'info' chỉ có tối đa 50 phần tử
+	if (this.info.length > 50) {
+		this.info = this.info.slice(-50);
 	}
 	next();
 });

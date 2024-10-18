@@ -20,7 +20,6 @@ const uploadMultiple = asyncHandler(async (req, res, next) => {
 			imageUrls.push(result.secure_url);
 		}
 		req.body.images = imageUrls;
-		console.log(req.body.images);
 		next();
 	} catch (error) {
 		console.log("uploadMultiple error", error);

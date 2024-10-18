@@ -176,9 +176,23 @@ const deleteUser = async (req, res) => {
 const getAllUsers = async (req, res) => {
 	try {
 		const role = req.body.role;
-		const response = await UserService.getAllUsers(role);
+		const page = req.query.page || 1;
+		const limit = req.query.limit || 5;
+		const response = await UserService.getAllUsers(role, page, limit);
 		return res.status(200).json(response);
 	} catch (error) {
+		return res.status(404).json({ message: error });
+	}
+};
+const getAllSellers = async (req, res) => {
+	try {
+		const page = req.query.page || 1;
+		const limit = req.query.limit || 5;
+		const response = await UserService.getAllSellers(page, limit);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at getAllSellers Controller: ", error);
+
 		return res.status(404).json({ message: error });
 	}
 };
@@ -206,7 +220,6 @@ const logoutUser = async (req, res) => {
 
 const infoUser = async (req, res) => {
 	try {
-		
 		const userID = req.params.id;
 		const response = await UserService.infoUser(userID);
 		return res.status(200).json(response);
@@ -256,4 +269,5 @@ module.exports = {
 	infoUser,
 	searchUser,
 	refreshToken,
+	getAllSellers,
 };

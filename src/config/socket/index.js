@@ -3,6 +3,7 @@ const { Server } = require("socket.io");
 const productService = require("../../services/ProductService");
 const orderService = require("../../services/OrderService");
 const orderDetailService = require("../../services/OrderDetailService");
+const ratingService = require("../../services/RatingService");
 
 // SOCKET.IO
 const io = new Server({
@@ -38,6 +39,7 @@ const onConnection = (socket) => {
 productService.socket(io, getUser);
 orderService.socket(io, getUser);
 orderDetailService.socket(io, getUser);
+ratingService.socket(io, getUser);
 
 io.on("connection", onConnection);
 

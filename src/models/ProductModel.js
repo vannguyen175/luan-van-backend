@@ -8,12 +8,12 @@ const productSchema = new mongoose.Schema(
 			required: true,
 		}, //ID_user
 		name: { type: String, required: true },
-		sellerName: { type: String, required: true },
+		// sellerName: { type: String, required: true },
 		images: [],
 		subCategory: { type: String, required: true },
 		stateProduct: {
 			type: String,
-		},
+		}, //trạng thái sản phẩm (mới hay cũ)
 		info: { type: Object, required: true },
 		price: { type: Number, required: true },
 		description: { type: String },

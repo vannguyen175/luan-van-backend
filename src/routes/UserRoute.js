@@ -12,6 +12,7 @@ router.post("/logout", userController.logoutUser);
 router.put("/update/:id", userController.updateUser);
 router.delete("/delete/:id", authMiddleware, userController.deleteUser);
 router.post("/getAll", authMiddleware, userController.getAllUsers);
+router.post("/getAllSeller", authMiddleware, userController.getAllSellers);
 router.get("/details/:id", authUserMiddleWare, userController.detailUser);
 router.get("/info/:id", userController.infoUser);
 router.get("/search/:key", authMiddleware, userController.searchUser);

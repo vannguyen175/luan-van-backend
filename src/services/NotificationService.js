@@ -70,6 +70,7 @@ const getNotification = async (user) => {
 		try {
 			let unseenCount = 0;
 			const notification = await Notification.findOne({ user: user });
+
 			if (notification) {
 				unseenCount = await unSeenCount(user);
 			}

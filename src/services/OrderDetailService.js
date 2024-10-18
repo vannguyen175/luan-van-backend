@@ -1,11 +1,19 @@
 const Product = require("../models/ProductModel");
 const { OrderDetail, OrderStatus } = require("../models/OrderDetailModel");
 const { Order } = require("../models/OrderModel");
-const User = require("../models/UserModel");
 const Seller = require("../models/SellerModel");
+const Rating = require("../models/RatingModel");
 const NotificationService = require("../services/NotificationService");
 
 const CartService = require("../services/CartService");
+
+const cancelReason = {
+	0: "Muốn thay đổi địa chỉ giao hàng",
+	1: "Tìm thấy giá rẻ hơn ở chỗ khác",
+	2: "Thủ tục thanh toán rắc rối",
+	3: "Thay đổi ý",
+	4: "Khác",
+};
 
 let io; //biến io đã khởi tạo ở socket.js
 let getUserSocketId; //hàm lấy socket userID
@@ -89,7 +97,7 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 
 			let orders = {};
 			if (seller) {
-				//lấy đơn hàng theo người bán
+				//lấy tất cả đơn hàng theo người bán
 				orders = await OrderDetail.find({ idSeller: seller, status: statusOrder })
 					.sort({ _id: 1 }) //Lấy order mới nhất
 					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
@@ -99,6 +107,8 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 						select: "images name sellerName price",
 						populate: {
 							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
 							select: "name",
 						},
 					})
@@ -109,9 +119,13 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 							path: "idBuyer",
 							select: "name",
 						},
+					})
+					.populate({
+						path: "idSeller",
+						select: "name",
 					});
 			} else {
-				//lấy đơn hàng theo người mua
+				//lấy tất cả đơn hàng theo người mua
 				const getOrdersBuyer = await Order.find({ idBuyer: buyer });
 				const orderIds = getOrdersBuyer.map((order) => order._id); // Lấy danh sách idOrder
 
@@ -124,9 +138,31 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 						select: "images name sellerName",
 						populate: {
 							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
 							select: "name",
 						},
+					})
+					.populate({
+						path: "idSeller",
+						select: "name",
 					});
+				const promises = orders.map(async (order) => {
+					const ratingInfo = await Rating.findOne({ idOrder: order._id });
+					if (ratingInfo) {
+						return {
+							...order.toObject(),
+							ratingInfo: {
+								_id: ratingInfo._id,
+								review: ratingInfo.review || "Không có",
+								score: ratingInfo.score,
+							},
+						};
+					}
+					return order;
+				});
+
+				orders = await Promise.all(promises);
 			}
 			resolve({
 				status: "SUCCESS",
@@ -215,9 +251,65 @@ const updateOrderDetail = (idOrder, data) => {
 	});
 };
 
+const cancelOrder = (reason, idOrder) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkOrder = await OrderDetail.findById({ _id: idOrder }).populate({
+				path: "idProduct",
+				select: "images name",
+			});
+			console.log(checkOrder);
+
+			if (checkOrder === null) {
+				reject({
+					status: "ERROR",
+					message: "Đơn hàng không tồn tại",
+				});
+			} else {
+				await Product.findByIdAndUpdate({ _id: checkOrder.idProduct._id }, { statePost: "approved" });
+				const updateOrder = await OrderDetail.findByIdAndUpdate(
+					idOrder,
+					{
+						status: OrderStatus[4], //status: đã hủy
+						cancelReason: cancelReason[reason],
+					},
+					{
+						new: true,
+					}
+				);
+				const userSocket = getUserSocketId(checkOrder.idSeller);
+				const addNoti = await NotificationService.addNotification({
+					user: checkOrder.idSeller,
+					info: {
+						product: checkOrder.idProduct._id,
+						image: checkOrder.idProduct.images[0],
+						navigate: "seller-order",
+						message: "Người mua đã hủy đơn hàng.",
+					},
+				});
+				if (userSocket) {
+					io.to(userSocket.socketId).emit("getNotification", {
+						unseenCount: addNoti.unseenCount,
+					});
+				}
+
+				return resolve({
+					status: "SUCCESS",
+					message: "Hủy đơn hàng thành công",
+					data: updateOrder,
+				});
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
+
 module.exports = {
 	socket,
 	createOrderDetail,
 	getOrdersDetail,
 	updateOrderDetail,
+	cancelOrder,
 };
