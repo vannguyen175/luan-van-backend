@@ -9,7 +9,7 @@ const sellerSchema = new mongoose.Schema(
 		},
 		totalProduct: { type: Number, default: 0 },
 		totalSold: { type: Number, default: 0 },
-		rating: { type: Number, default: 0 },
+		revenue: { type: Number, default: 0 },
 	},
 	{
 		new: true,

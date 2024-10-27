@@ -2,12 +2,36 @@ const User = require("../models/UserModel");
 const Address = require("../models/AddressModel");
 const Seller = require("../models/SellerModel");
 const Rating = require("../models/RatingModel");
+const { OrderDetail, OrderStatus } = require("../models/OrderDetailModel");
 
 const mongoose = require("mongoose");
 
 const bcrypt = require("bcrypt"); //ma hoa mat khau
 const { genneralAccessToken, genneralRefreshToken } = require("./JwtService");
 
+//kiểm tra tài khoản của người dùng xem có bị chặn không
+const checkBanStatus = (idUser) => {
+	return new Promise(async (resolve, reject) => {
+		const userAccount = await User.findById(idUser).select("blockExpireDate blockReason");
+
+		// Kiểm tra nếu tài khoản đang bị khóa
+		if (userAccount.blockExpireDate && new Date(userAccount.blockExpireDate) > new Date()) {
+			return resolve({
+				status: "BLOCKED",
+				message: "Tài khoản của bạn đã bị khóa tạm thời.",
+				isBlocked: true,
+				blockExpireDate: userAccount.blockExpireDate,
+				blockReason: userAccount.blockReason,
+			});
+		} else {
+			return resolve({
+				status: "NON-BLOCKED",
+				message: "",
+				isBlocked: false,
+			});
+		}
+	});
+};
 const createUser = (newUser) => {
 	return new Promise(async (resolve, reject) => {
 		const { name, email, password, phone, isAdmin, avatar } = newUser;
@@ -43,7 +67,6 @@ const createUser = (newUser) => {
 						user: createUser._id,
 						phone,
 					});
-					await Seller.create({ idUser: createUser._id });
 					if (createAddress) {
 						resolve({
 							status: "SUCCESS",
@@ -70,6 +93,9 @@ const loginUser = (loginUser) => {
 					message: "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
 				});
 			} else {
+				const checkBanResult = await checkBanStatus(checkUser._id);
+				if (checkBanResult.status === "ERROR") {
+				}
 				const isMatch = await bcrypt.compare(password, checkUser?.password);
 
 				if (isMatch === false) {
@@ -117,7 +143,6 @@ const loginWithGoogle = (email, name, picture) => {
 					avatar: picture,
 				});
 				await Address.create({ user: newUser._id });
-				await Seller.create({ idUser: newUser._id });
 
 				access_token = await genneralAccessToken({
 					id: newUser.id,
@@ -165,7 +190,6 @@ const loginWithFacebook = (email, name, picture) => {
 					avatar: picture,
 				});
 				await Address.create({ user: newUser._id });
-				await Seller.create({ idUser: newUser._id });
 				access_token = await genneralAccessToken({
 					id: newUser.id,
 					isAdmin: newUser.isAdmin,
@@ -330,7 +354,7 @@ const getAllUsers = (role, page, limit) => {
 				path: "user",
 				match: { isAdmin: role === "admin" },
 			});
-			
+
 			result = result.filter((res) => res.user);
 			const paginatedResult = result.slice((page - 1) * perPage, page * perPage);
 			resolve({
@@ -350,12 +374,49 @@ const getAllSellers = (page, limit) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const perPage = limit; //Số items trên 1 page
-			let result = await Seller.find({}).populate({
+			const sellers = await Seller.find({}).populate({
 				path: "idUser",
-				match: { isAdmin: false },
-				select: "name email avatar",
+				select: "name email avatar blockExpireDate blockReason",
 			});
-			result = result.filter((res) => res.idUser);
+
+			const result = await Promise.all(
+				//result = seller + rating
+				sellers.map(async (seller) => {
+					const avgRating = await Rating.aggregate([
+						{
+							$match: { idSeller: new mongoose.Types.ObjectId(seller.idUser._id) },
+						},
+						{
+							$group: {
+								_id: "$idSeller",
+								averageRating: { $avg: "$score" },
+								totalReviews: { $sum: 1 },
+							},
+						},
+					]);
+
+					const revenue = await OrderDetail.aggregate([
+						{
+							$match: { idSeller: new mongoose.Types.ObjectId(seller.idUser._id), status: OrderStatus[3] },
+						},
+						{
+							$group: {
+								_id: "$idSeller",
+								totalRevenue: { $sum: "$productPrice" },
+							},
+						},
+					]);
+
+					// Gộp thông tin seller và rating lại
+					return {
+						...seller.toObject(), // Chuyển seller từ mongoose document sang plain object
+						averageRating: avgRating.length > 0 ? avgRating[0].averageRating : null, // Nếu không có rating nào thì giá trị là null
+						totalReviews: avgRating.length > 0 ? avgRating[0].totalReviews : 0,
+						totalRevenue: revenue.length > 0 ? revenue[0].totalRevenue : 0,
+					};
+				})
+			);
+
 			const paginatedResult = result.slice((page - 1) * perPage, page * perPage);
 
 			resolve({
@@ -366,6 +427,56 @@ const getAllSellers = (page, limit) => {
 			});
 		} catch (error) {
 			console.log("Have error at getAllSellers service", error);
+			reject(error);
+		}
+	});
+};
+const sellerDetail = (idSeller) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const sellers = await Seller.findOne({ idUser: idSeller }).populate({
+				path: "idUser",
+				select: "name email avatar blockExpireDate blockReason",
+			});
+			const address = await Address.findOne({ user: idSeller });
+
+			const avgRating = await Rating.aggregate([
+				{
+					$match: { idSeller: new mongoose.Types.ObjectId(idSeller) },
+				},
+				{
+					$group: {
+						_id: "$idSeller",
+						averageRating: { $avg: "$score" },
+						totalReviews: { $sum: 1 },
+					},
+				},
+			]);
+			const revenue = await OrderDetail.aggregate([
+				{
+					$match: { idSeller: new mongoose.Types.ObjectId(idSeller), status: OrderStatus[3] },
+				},
+				{
+					$group: {
+						_id: "$idSeller",
+						totalRevenue: { $sum: "$productPrice" },
+					},
+				},
+			]);
+
+			resolve({
+				status: "SUCCESS",
+				message: "SUCCESS",
+				data: {
+					sellers,
+					address,
+					averageRating: avgRating[0]?.averageRating || null,
+					totalReviews: avgRating[0]?.totalReviews || 0,
+					totalRevenue: revenue[0]?.totalRevenue || 0,
+				},
+			});
+		} catch (error) {
+			console.log("Have error at sellerDetail service", error);
 			reject(error);
 		}
 	});
@@ -408,7 +519,7 @@ const infoUser = (userID) => {
 				})
 				.populate({
 					path: "idBuyer",
-					select: "name avatar",
+					select: "name avatar blockExpireDate blockReason",
 				});
 
 			const avgRating = await Rating.aggregate([
@@ -494,17 +605,73 @@ const searchUser = (key) => {
 	});
 };
 
+const blockExpire = {
+	0: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 ngày
+	1: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 ngày
+	2: Date.now() + 90 * 24 * 60 * 60 * 1000, // 90 ngày
+	3: Date.now() + 18250 * 24 * 60 * 60 * 1000, // vĩnh viễn (50 năm)
+};
+
+const blockReasonData = {
+	0: "Vi phạm chính sách bán hàng",
+	1: "Vi phạm chính sách mua hàng",
+	2: "Khác",
+};
+
+const blockUser = (idUser, dateExpire, blockReason) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const checkUser = await User.findOne({ _id: idUser });
+			if (checkUser === null) {
+				resolve({
+					status: "ERROR",
+					message: "Người dùng không tồn tại",
+				});
+			} else {
+				if (dateExpire && blockReason) {
+					//chặn user
+					const updateUser = await User.findByIdAndUpdate(
+						idUser,
+						{ blockExpireDate: blockExpire[dateExpire], blockReason: blockReasonData[blockReason] },
+						{ new: true }
+					);
+					if (updateUser) {
+						resolve({
+							status: "SUCCESS",
+							message: "Chặn người dùng thành công!",
+						});
+					}
+				} else {
+					const updateUser = await User.findByIdAndUpdate(idUser, { blockExpireDate: "", blockReason: "" }, { new: true });
+					if (updateUser) {
+						resolve({
+							status: "SUCCESS",
+							message: "Hủy chặn người dùng thành công!",
+						});
+					}
+				}
+			}
+		} catch (error) {
+			console.log("error", error);
+			reject(error);
+		}
+	});
+};
+
 module.exports = {
 	createUser,
 	loginWithGoogle,
 	loginUser,
 	loginAdmin,
 	updateUser,
-	deleteUser,
+	deleteUser, //xóa
 	getAllUsers,
 	detailUser,
 	infoUser,
 	searchUser,
 	loginWithFacebook,
 	getAllSellers,
+	sellerDetail,
+	blockUser,
+	checkBanStatus,
 };

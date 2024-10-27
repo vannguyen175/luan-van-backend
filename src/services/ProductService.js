@@ -3,6 +3,7 @@ const SubCategory = require("../models/Sub_categoryModel");
 const User = require("../models/UserModel");
 const NotificationService = require("../services/NotificationService");
 const cloudinary = require("../config/cloundiary/cloundiary.config");
+const Seller = require("../models/SellerModel");
 // const httpServer  = require("http").createServer();
 
 const uploadImage = async (images) => {
@@ -32,7 +33,7 @@ const createProduct = async (newProduct) => {
 					subCategory: data_subCategory[0].slug,
 					name: newProduct.name,
 					price: newProduct.price,
-					idUser: newProduct.idUser,
+					idUser: newProduct.idUser, //idSeller
 					address: newProduct.address,
 					images: newImages,
 					info: newProduct.info,
@@ -40,6 +41,20 @@ const createProduct = async (newProduct) => {
 					quantity: newProduct.quantity,
 					statePost: newProduct.totalSold >= 2 ? "approved" : "waiting",
 				});
+				if (createProduct) {
+					const checkSellerExist = await Seller.findById(newProduct.idUser);
+					if (checkSellerExist) {
+						await Seller.findByIdAndUpdate(
+							{ _id: newProduct.idUser },
+							{
+								$inc: { totalProduct: 1 },
+							},
+							{ new: true }
+						);
+					} else {
+						await Seller.create({ idUser: createUser._id, totalProduct: 1 });
+					}
+				}
 				resolve({
 					status: "SUCCESS",
 					message: "Tạo bài đăng thành công",

@@ -67,13 +67,13 @@ const updateCart = (idUser, product) => {
 
 const deleteCart = (idUser, idProduct) => {
 	return new Promise(async (resolve, reject) => {
-		try {			
-			const checkCart = await Cart.findOne({ idUser: idUser, "product.idProduct": idProduct });			
+		try {
+			const checkCart = await Cart.findOne({ idUser: idUser, "product.idProduct": idProduct });
 			if (checkCart) {
 				const result = await Cart.findOneAndUpdate(
-					{ idUser: idUser }, 
+					{ idUser: idUser },
 					{ $pull: { product: { idProduct: idProduct } } }, // Xóa sản phẩm có idProduct từ mảng product
-					{ new: true } 
+					{ new: true }
 				);
 				return resolve({
 					status: "SUCCESS",
@@ -100,15 +100,18 @@ const getCart = (idUser) => {
 			if (checkCart) {
 				let productDetail = [];
 				for (let index = 0; index < checkCart.product.length; index++) {
-					const detail = await Product.findById(checkCart.product[index].idProduct);
+					const detail = await Product.findById(checkCart.product[index].idProduct).populate({
+						path: "idUser",
+						select: "name",
+					});
 					if (detail) {
 						productDetail = [
 							...productDetail,
 							{
 								idProduct: detail._id,
 								name: detail.name,
-								sellerName: detail.sellerName,
-								idSeller: detail.idUser,
+								sellerName: detail.idUser.name,
+								idSeller: detail.idUser._id,
 								image: detail.images[0],
 								price: detail.price,
 								totalQuantity: detail.quantity,

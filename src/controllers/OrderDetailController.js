@@ -62,9 +62,21 @@ const cancelOrder = async (req, res) => {
 	}
 };
 
+const searchOrderDetail = async (req, res) => {
+	try {
+		const { productName, buyerName, idSeller, status } = req.body.data;
+		const response = await OrderDetailService.searchOrderDetail(productName, buyerName, idSeller, status);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+
 module.exports = {
 	createOrderDetail,
 	getOrdersDetail,
 	updateOrderDetail,
-	cancelOrder
+	cancelOrder,
+	searchOrderDetail,
 };

@@ -4,7 +4,7 @@ const OrderService = require("../services/OrderService");
 const createOrder = async (req, res) => {
 	try {
 		const { shippingDetail, paymentMethod, idBuyer, totalPaid, products } = req.body;
-		
+
 		if (!shippingDetail || !paymentMethod || !idBuyer || !totalPaid || !products) {
 			return res.status(200).json({
 				status: "ERROR",
@@ -32,6 +32,7 @@ const getOrders = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+
 const updateOrder = async (req, res) => {
 	try {
 		const idOrder = req.params.id;
@@ -44,7 +45,6 @@ const updateOrder = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
-
 
 const ChartAnalyticOrder = async (req, res) => {
 	try {
@@ -62,4 +62,5 @@ module.exports = {
 	updateOrder,
 	ChartAnalyticOrder,
 	getOrders,
+	
 };

@@ -6,6 +6,7 @@ const Rating = require("../models/RatingModel");
 const NotificationService = require("../services/NotificationService");
 
 const CartService = require("../services/CartService");
+const User = require("../models/UserModel");
 
 const cancelReason = {
 	0: "Muốn thay đổi địa chỉ giao hàng",
@@ -37,8 +38,9 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 					isPaid: paymentMethod === "vnpay",
 					note: products[index]?.note,
 				});
-				//cập nhật số lượng sản phẩm + trạng thái của sản phẩm
+				//bán thành công => cập nhật (trừ) số lượng sản phẩm + trạng thái của sản phẩm
 				if (createDetailOrder) {
+					//nếu tạo đơn hàng thành công
 					const productStored = await Product.findOne({ _id: products[index].idProduct });
 					if (productStored.quantity >= products[index].quantity) {
 						await Product.findByIdAndUpdate(
@@ -54,8 +56,17 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 					if (productStored.quantity == products[index].quantity) {
 						await Product.findByIdAndUpdate(products[index].idProduct, { statePost: "selled" }, { new: true });
 					}
+					//cập nhật số lượng SP bán thành công trong Seller modal
+					await Seller.findByIdAndUpdate(
+						{ _id: products[index].idSeller },
+						{
+							$inc: {
+								totalSold: 1,
+							},
+						},
+						{ new: true }
+					);
 				}
-
 				//xóa sản phẩm trong giỏ hàng
 				await CartService.deleteCart(idBuyer, products[index].idProduct);
 			}
@@ -164,6 +175,44 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 
 				orders = await Promise.all(promises);
 			}
+			resolve({
+				status: "SUCCESS",
+				message: "Lấy đơn hàng thành công!",
+				data: orders,
+			});
+		} catch (error) {
+			reject(error);
+			console.log(error);
+		}
+	});
+};
+const searchOrderDetail = (productName, buyerName, idSeller, status) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			//tìm tất cả SP thuộc cùng 1 người bán (idSeller) + tên SP
+			let orders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] })
+				.populate({
+					path: "idProduct",
+					match: { name: { $regex: productName, $options: "i" } },
+					select: "images name sellerName",
+					populate: {
+						path: "subCategory",
+						model: "Sub_category",
+						foreignField: "slug",
+						select: "name",
+					},
+				})
+				.populate({
+					path: "idOrder",
+					select: "shippingDetail idBuyer paymentMethod",
+					populate: {
+						path: "idBuyer",
+						match: { name: { $regex: buyerName, $options: "i" } },
+						select: "name",
+					},
+				});
+			//lọc những orders có trùng tên sp hoặc tên buyer với từ khóa tìm kiếm (ko trùng thì có giá trị null)
+			orders = orders.filter((ord) => ord.idProduct || ord.idOrder.idBuyer);
 			resolve({
 				status: "SUCCESS",
 				message: "Lấy đơn hàng thành công!",
@@ -312,4 +361,5 @@ module.exports = {
 	getOrdersDetail,
 	updateOrderDetail,
 	cancelOrder,
+	searchOrderDetail,
 };

@@ -1,6 +1,24 @@
 const UserService = require("../services/UserService.js");
 const JwtService = require("../services/JwtService.js");
 
+const checkBanStatus = async (req, res) => {
+	try {
+		const idUser = req.params.id;
+
+		if (!idUser) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Thiếu id người dùng.",
+			});
+		}
+		const response = await UserService.checkBanStatus(idUser);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at checkBanStatus controller", error);
+
+		return res.status(404).json({ message: error });
+	}
+};
 const createUser = async (req, res) => {
 	try {
 		const { name, email, password, confirmPassword, phone } = req.body;
@@ -196,6 +214,17 @@ const getAllSellers = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const sellerDetail = async (req, res) => {
+	try {
+		const idSeller = req.params.id;
+		const response = await UserService.sellerDetail(idSeller);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at sellerDetail Controller: ", error);
+
+		return res.status(404).json({ message: error });
+	}
+};
 
 const detailUser = async (req, res) => {
 	try {
@@ -254,6 +283,18 @@ const refreshToken = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const blockUser = async (req, res) => {
+	try {
+		const idUser = req.params.id;
+		const { dateExpire, blockReason } = req.body;
+
+		const response = await UserService.blockUser(idUser, dateExpire, blockReason);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at blockUser", error);
+		return res.status(404).json({ message: error });
+	}
+};
 
 module.exports = {
 	createUser,
@@ -270,4 +311,7 @@ module.exports = {
 	searchUser,
 	refreshToken,
 	getAllSellers,
+	sellerDetail,
+	blockUser,
+	checkBanStatus,
 };

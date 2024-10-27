@@ -140,6 +140,7 @@ const getOrders = (seller, buyer, status, page, limit) => {
 	});
 };
 
+
 const updateOrder = (idOrder, data) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -270,5 +271,5 @@ module.exports = {
 	updateOrder,
 	ChartAnalyticOrder,
 	getOrders,
-
+	
 };
