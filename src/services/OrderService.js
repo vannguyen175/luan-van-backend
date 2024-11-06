@@ -6,8 +6,6 @@ const OrderDetailService = require("../services/OrderDetailService");
 const { default: mongoose } = require("mongoose");
 const Rating = require("../models/RatingModel");
 
-
-
 let io; //biến io đã khởi tạo ở socket.js
 let getUserSocketId; //hàm lấy socket userID
 
@@ -50,9 +48,9 @@ const createOrder = (newOrder) => {
 
 			if (createOrder) {
 				const response = await OrderDetailService.createOrderDetail(products, createOrder._id, paymentMethod, idBuyer);
-				if (response.status === "success") {
+				if (response.status === "SUCCESS") {
 					return resolve({
-						status: "success",
+						status: "SUCCESS",
 						message: "Đặt hàng thành công!",
 					});
 				}
@@ -109,8 +107,7 @@ const getOrders = (seller, buyer, status, page, limit) => {
 					.populate({
 						path: "buyer",
 						select: "avatar name",
-					})
-					
+					});
 			} else {
 				//lấy đơn hàng theo người mua
 				orders = await Order.find({ buyer: buyer, status: statusOrder })
@@ -124,8 +121,7 @@ const getOrders = (seller, buyer, status, page, limit) => {
 							path: "subCategory",
 							select: "name",
 						},
-					})
-				
+					});
 			}
 
 			resolve({
@@ -139,7 +135,6 @@ const getOrders = (seller, buyer, status, page, limit) => {
 		}
 	});
 };
-
 
 const updateOrder = (idOrder, data) => {
 	return new Promise(async (resolve, reject) => {
@@ -199,7 +194,6 @@ const updateOrder = (idOrder, data) => {
 		}
 	});
 };
-
 
 const ChartAnalyticOrder = (idUser) => {
 	return new Promise(async (resolve, reject) => {
@@ -271,5 +265,4 @@ module.exports = {
 	updateOrder,
 	ChartAnalyticOrder,
 	getOrders,
-	
 };

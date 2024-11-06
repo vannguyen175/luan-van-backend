@@ -102,7 +102,7 @@ const getCart = (idUser) => {
 				for (let index = 0; index < checkCart.product.length; index++) {
 					const detail = await Product.findById(checkCart.product[index].idProduct).populate({
 						path: "idUser",
-						select: "name",
+						select: "name email",
 					});
 					if (detail) {
 						productDetail = [
@@ -111,6 +111,7 @@ const getCart = (idUser) => {
 								idProduct: detail._id,
 								name: detail.name,
 								sellerName: detail.idUser.name,
+								email: detail.idUser.email,
 								idSeller: detail.idUser._id,
 								image: detail.images[0],
 								price: detail.price,

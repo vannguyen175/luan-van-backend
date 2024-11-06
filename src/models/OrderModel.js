@@ -7,7 +7,6 @@ const orderSchema = new mongoose.Schema(
 			address: { type: String, required: true }, //address_buyer
 			phone: { type: Number, required: true }, //phone_buyer
 			shippingPrice: { type: Number, required: true },
-			isPaid: { type: Boolean, default: false }, //da thanh toan hay chua (đối với paymentMethod = "cash")
 			deliveredAt: { type: Date }, //thời điểm giao hàng thành công
 		},
 		idBuyer: {

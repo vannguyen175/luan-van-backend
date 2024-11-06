@@ -56,9 +56,13 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 					if (productStored.quantity == products[index].quantity) {
 						await Product.findByIdAndUpdate(products[index].idProduct, { statePost: "selled" }, { new: true });
 					}
+
+					console.log("index", index, products[0].idSeller._id);
+					console.log("products[index].idSeller || products[index].idSeller._id", products[index].idSeller || products[index].idSeller._id);
+
 					//cập nhật số lượng SP bán thành công trong Seller modal
-					await Seller.findByIdAndUpdate(
-						{ _id: products[index].idSeller },
+					await Seller.findOneAndUpdate(
+						{ _id: createDetailOrder.idSeller },
 						{
 							$inc: {
 								totalSold: 1,
@@ -71,7 +75,7 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 				await CartService.deleteCart(idBuyer, products[index].idProduct);
 			}
 			return resolve({
-				status: "success",
+				status: "SUCCESS",
 				message: "Đặt hàng thành công!",
 			});
 		} catch (error) {
@@ -245,13 +249,16 @@ const updateOrderDetail = (idOrder, data) => {
 			} else {
 				//đơn hàng đã được người bán chấp nhận => bán thành công
 				if (data.status === "1") {
-					// const updateProduct = await Product.findByIdAndUpdate(checkOrder.product, {
-					// 	selled: true,
-					// });
-					//imageProduct = updateProduct.images[0];
-					await Seller.findOneAndUpdate({ idUser: checkOrder.idOrder.idBuyer }, { $inc: { totalSold: 1 } }); //tăng totalSelled thêm 1
+					await Seller.findOneAndUpdate(
+						{ idUser: checkOrder.idOrder.idBuyer },
+						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } }
+					); //tăng totalSelled thêm 1
 				} else if (data.status === "4") {
 					//đơn hàng bị hủy
+					await Seller.findOneAndUpdate(
+						{ idUser: checkOrder.idOrder.idBuyer },
+						{ $inc: { totalSold: -1, revenue: -(checkOrder.productPrice * checkOrder.quantity) } }
+					); //tăng totalSelled thêm 1
 					await Product.findByIdAndUpdate(
 						checkOrder.idProduct,
 						{
@@ -264,13 +271,25 @@ const updateOrderDetail = (idOrder, data) => {
 				if (data.status) {
 					status = OrderStatus[data.status];
 				}
-				const updateOrder = await OrderDetail.findByIdAndUpdate(
-					idOrder,
-					{ ...data, status: status },
-					{
-						new: true,
-					}
-				);
+				if (data.status === 3) {
+					//update isPaid khi trạng thái giao hàng === "Đã giao"
+					await OrderDetail.findByIdAndUpdate(
+						idOrder,
+						{ ...data, status: status, isPaid: true },
+						{
+							new: true,
+						}
+					);
+				} else {
+					await OrderDetail.findByIdAndUpdate(
+						idOrder,
+						{ ...data, status: status },
+						{
+							new: true,
+						}
+					);
+				}
+
 				const userSocket = getUserSocketId(checkOrder.idOrder.idBuyer);
 				const addNoti = await NotificationService.addNotification({
 					user: checkOrder.idOrder.idBuyer,

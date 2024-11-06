@@ -24,10 +24,33 @@ const checkBanStatus = (idUser) => {
 				blockReason: userAccount.blockReason,
 			});
 		} else {
+			if (userAccount.blockExpireDate && new Date(userAccount.blockExpireDate) > new Date()) {
+				await User.findByIdAndUpdate(idUser, { blockExpireDate: null, blockReason: null }, { new: true });
+			}
+
 			return resolve({
 				status: "NON-BLOCKED",
 				message: "",
 				isBlocked: false,
+			});
+		}
+	});
+};
+
+//kiểm tra tồn tại email, dùng trong chức năng 'forgotten password'
+const checkEmailExist = (email) => {
+	return new Promise(async (resolve, reject) => {
+		const userAccount = await User.findOne({ email: email }).select("email password loginMethod name avatar");
+		if (userAccount) {
+			return resolve({
+				status: "SUCCESS",
+				message: "Tồn tại tài khoản.",
+				data: userAccount,
+			});
+		} else {
+			return resolve({
+				status: "ERROR",
+				message: "Địa chỉ email này chưa được đăng ký.",
 			});
 		}
 	});
@@ -84,25 +107,30 @@ const createUser = (newUser) => {
 
 const loginUser = (loginUser) => {
 	return new Promise(async (resolve, reject) => {
-		const { email, password } = loginUser;
+		const { email, password, isForgotPass } = loginUser;
 		try {
-			const checkUser = await User.findOne({ email: email, isAdmin: false });
-			if (checkUser === null) {
+			const checkUser = await User.findOne({ email: email.toLowerCase(), isAdmin: false });
+
+			if (checkUser?.loginMethod && checkUser?.password === undefined) {
+				return resolve({
+					status: "ERROR",
+					message: `Tài khoản của bạn được kết nối với ${checkUser?.loginMethod} - hãy sử dụng nút ${checkUser?.loginMethod} để đăng nhập`,
+				});
+			} else if (checkUser === null) {
 				return resolve({
 					status: "ERROR",
 					message: "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
 				});
 			} else {
-				const checkBanResult = await checkBanStatus(checkUser._id);
-				if (checkBanResult.status === "ERROR") {
-				}
-				const isMatch = await bcrypt.compare(password, checkUser?.password);
+				if (!isForgotPass) {
+					const isMatch = await bcrypt.compare(password, checkUser?.password);
 
-				if (isMatch === false) {
-					return resolve({
-						status: "ERROR",
-						message: "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
-					});
+					if (isMatch === false) {
+						return resolve({
+							status: "ERROR",
+							message: "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại...",
+						});
+					}
 				}
 			}
 
@@ -141,6 +169,7 @@ const loginWithGoogle = (email, name, picture) => {
 					email,
 					name,
 					avatar: picture,
+					loginMethod: "Google",
 				});
 				await Address.create({ user: newUser._id });
 
@@ -188,6 +217,7 @@ const loginWithFacebook = (email, name, picture) => {
 					email,
 					name,
 					avatar: picture,
+					loginMethod: "Facebook",
 				});
 				await Address.create({ user: newUser._id });
 				access_token = await genneralAccessToken({
@@ -227,7 +257,7 @@ const loginAdmin = (loginAdmin) => {
 	return new Promise(async (resolve, reject) => {
 		const { email, password } = loginAdmin;
 		try {
-			const checkUser = await User.findOne({ email: email, isAdmin: true });
+			const checkUser = await User.findOne({ email: email.toLowerCase(), isAdmin: true });
 			if (checkUser === null) {
 				return resolve({
 					status: "ERROR",
@@ -511,6 +541,7 @@ const infoUser = (userID) => {
 
 			const address = await Address.findOne({ user: userID });
 			const seller = await Seller.findOne({ idUser: userID });
+
 			const rating = await Rating.find({ idSeller: userID })
 				.select("score review")
 				.populate({
@@ -535,12 +566,14 @@ const infoUser = (userID) => {
 				},
 			]);
 
+			console.log("seller", { ...seller });
+
 			if (result?.password) {
 				const { password, ...user } = result; //destructuring
 				const data = {
 					...address?._doc,
 					...result._doc,
-					...seller._doc,
+					...seller?._doc,
 					rating,
 					avgRating,
 				};
@@ -642,7 +675,7 @@ const blockUser = (idUser, dateExpire, blockReason) => {
 						});
 					}
 				} else {
-					const updateUser = await User.findByIdAndUpdate(idUser, { blockExpireDate: "", blockReason: "" }, { new: true });
+					const updateUser = await User.findByIdAndUpdate(idUser, { blockExpireDate: null, blockReason: null }, { new: true });
 					if (updateUser) {
 						resolve({
 							status: "SUCCESS",
@@ -674,4 +707,5 @@ module.exports = {
 	sellerDetail,
 	blockUser,
 	checkBanStatus,
+	checkEmailExist,
 };

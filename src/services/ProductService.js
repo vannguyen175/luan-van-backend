@@ -42,17 +42,17 @@ const createProduct = async (newProduct) => {
 					statePost: newProduct.totalSold >= 2 ? "approved" : "waiting",
 				});
 				if (createProduct) {
-					const checkSellerExist = await Seller.findById(newProduct.idUser);
+					const checkSellerExist = await Seller.findOne({ idUser: newProduct.idUser });
 					if (checkSellerExist) {
 						await Seller.findByIdAndUpdate(
-							{ _id: newProduct.idUser },
+							checkSellerExist._id,
 							{
 								$inc: { totalProduct: 1 },
 							},
 							{ new: true }
 						);
 					} else {
-						await Seller.create({ idUser: createUser._id, totalProduct: 1 });
+						await Seller.create({ idUser: checkSellerExist.idUser, totalProduct: 1 });
 					}
 				}
 				resolve({
@@ -62,7 +62,7 @@ const createProduct = async (newProduct) => {
 				});
 			}
 		} catch (error) {
-			console.log(error);
+			console.log("Error at createProduct Service: ", error);
 			reject(error);
 		}
 	});
@@ -246,9 +246,11 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 					})
 					.populate({
 						path: "idUser", //idSeller
-						select: "name",
+						select: "name blockExpireDate",
+						match: { $or: [{ blockExpireDate: { $lte: new Date() } }, { blockExpireDate: null }] }, // chỉ lấy người bán không bị khóa
 					});
-				products = products.filter((product) => product.subCategory && product.subCategory.category);
+
+				products = products.filter((product) => product.subCategory && product.subCategory.category && product.idUser);
 				const paginatedProducts = products.slice((page - 1) * perPage, page * perPage);
 				resolve({
 					status: "OK",
@@ -259,7 +261,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 			} else {
 				//lấy tất cả dữ liệu (có phân trang)
 				const totalPages = await Product.countDocuments(query);
-				const products = await Product.find(query)
+				let products = await Product.find(query)
 					.sort({ _id: -1 }) //lấy dữ liệu mới nhất
 					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
 					.limit(perPage)
@@ -276,7 +278,9 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 					.populate({
 						path: "idUser", //idSeller
 						select: "name",
+						match: { $or: [{ blockExpireDate: { $lte: new Date() } }, { blockExpireDate: null }] }, // chỉ lấy người bán không bị khóa
 					});
+				products = products.filter((product) => product.idUser);
 				resolve({
 					status: "OK",
 					message: "Lấy tất cả sản phẩm thành công!",
@@ -306,7 +310,7 @@ const detailProduct = (id) => {
 				})
 				.populate({
 					path: "idUser", //idSeller
-					select: "name",
+					select: "name email",
 				});
 
 			if (result === null) {

@@ -19,6 +19,31 @@ const checkBanStatus = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const checkEmailExist = async (req, res) => {
+	try {
+		const { email } = req.body;
+		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+		const isCheckEmail = regexEmail.test(email);
+		if (!email) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Thiếu email.",
+			});
+		}
+		if (!isCheckEmail) {
+			return res.status(200).json({
+				status: `ERROR`,
+				message: "Email không hợp lệ.",
+			});
+		}
+
+		const response = await UserService.checkEmailExist(email.toLowerCase());
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at checkEmailExist controller", error);
+		return res.status(404).json({ message: error });
+	}
+};
 const createUser = async (req, res) => {
 	try {
 		const { name, email, password, confirmPassword, phone } = req.body;
@@ -51,7 +76,7 @@ const createUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
 	try {
-		const { email, password } = req.body; //destructuring
+		const { email, password, isForgotPass } = req.body; //destructuring
 		const regexEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 		const isCheckEmail = regexEmail.test(email);
 		if (!email || !password) {
@@ -83,7 +108,7 @@ const loginUser = async (req, res) => {
 const loginWithGoogle = async (req, res) => {
 	try {
 		const { email, name, picture } = req.body;
-		const response = await UserService.loginWithGoogle(email, name, picture);
+		const response = await UserService.loginWithGoogle(email.toLowerCase(), name, picture);
 		const { refresh_token, ...newResponse } = response;
 		res.cookie("refresh_token", refresh_token, {
 			httpOnly: true,
@@ -98,7 +123,7 @@ const loginWithGoogle = async (req, res) => {
 const loginWithFacebook = async (req, res) => {
 	try {
 		const { email, name, picture } = req.body;
-		const response = await UserService.loginWithFacebook(email, name, picture);
+		const response = await UserService.loginWithFacebook(email.toLowerCase(), name, picture);
 		const { refresh_token, ...newResponse } = response;
 		res.cookie("refresh_token", refresh_token, {
 			httpOnly: true,
@@ -314,4 +339,5 @@ module.exports = {
 	sellerDetail,
 	blockUser,
 	checkBanStatus,
+	checkEmailExist,
 };
