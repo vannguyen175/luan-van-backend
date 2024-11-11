@@ -114,9 +114,9 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 			if (seller) {
 				//lấy tất cả đơn hàng theo người bán
 				orders = await OrderDetail.find({ idSeller: seller, status: statusOrder })
-					.sort({ _id: 1 }) //Lấy order mới nhất
-					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
-					.limit(perPage)
+					.sort({ _id: -1 }) //Lấy order mới nhất
+					//.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
+					//.limit(perPage)
 					.populate({
 						path: "idProduct",
 						select: "images name sellerName price",
@@ -145,9 +145,9 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 				const orderIds = getOrdersBuyer.map((order) => order._id); // Lấy danh sách idOrder
 
 				orders = await OrderDetail.find({ idOrder: { $in: orderIds }, status: statusOrder })
-					.sort({ _id: 1 }) //Lấy order mới nhất
-					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
-					.limit(perPage)
+					.sort({ _id: -1 }) //Lấy order mới nhất
+					//.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
+					//.limit(perPage)
 					.populate({
 						path: "idProduct",
 						select: "images name sellerName",
@@ -179,10 +179,12 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 
 				orders = await Promise.all(promises);
 			}
+			const paginatedResult = orders.slice((page - 1) * perPage, page * perPage);
 			resolve({
 				status: "SUCCESS",
 				message: "Lấy đơn hàng thành công!",
-				data: orders,
+				data: paginatedResult,
+				totalCount: orders.length,
 			});
 		} catch (error) {
 			reject(error);
@@ -190,14 +192,22 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 		}
 	});
 };
-const searchOrderDetail = (productName, buyerName, idSeller, status) => {
+const searchOrderDetail = (query, idSeller, status) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			// Tạo điều kiện tìm kiếm
+			let searchQuery = {
+				$or: [
+					{ orderId: query }, // Tìm theo mã đơn hàng
+					{ "buyer.name": { $regex: query, $options: "i" } }, // Tìm theo tên khách hàng
+					{ "product.name": { $regex: query, $options: "i" } }, // Tìm theo tên sản phẩm
+				],
+			};
 			//tìm tất cả SP thuộc cùng 1 người bán (idSeller) + tên SP
-			let orders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] })
+			let orders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] }, searchQuery)
 				.populate({
 					path: "idProduct",
-					match: { name: { $regex: productName, $options: "i" } },
+				//	match: { name: { $regex: productName, $options: "i" } },
 					select: "images name sellerName",
 					populate: {
 						path: "subCategory",
@@ -211,7 +221,7 @@ const searchOrderDetail = (productName, buyerName, idSeller, status) => {
 					select: "shippingDetail idBuyer paymentMethod",
 					populate: {
 						path: "idBuyer",
-						match: { name: { $regex: buyerName, $options: "i" } },
+					//	match: { name: { $regex: buyerName, $options: "i" } },
 						select: "name",
 					},
 				});
@@ -326,7 +336,6 @@ const cancelOrder = (reason, idOrder) => {
 				path: "idProduct",
 				select: "images name",
 			});
-			console.log(checkOrder);
 
 			if (checkOrder === null) {
 				reject({
@@ -334,7 +343,7 @@ const cancelOrder = (reason, idOrder) => {
 					message: "Đơn hàng không tồn tại",
 				});
 			} else {
-				await Product.findByIdAndUpdate({ _id: checkOrder.idProduct._id }, { statePost: "approved" });
+				await Product.findByIdAndUpdate({ _id: checkOrder.idProduct._id }, { statePost: "approved", $inc: { quantity: -1 } });
 				const updateOrder = await OrderDetail.findByIdAndUpdate(
 					idOrder,
 					{

@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
 		access_token: { type: String, require: true },
 		refresh_token: { type: String, require: true },
 		remember_token: { type: String },
-		avatar: { type: String, require: true, default: "assets/images/user-avatar.jpg" },
+		avatar: { type: String, require: true, default: "/assets/images/user-avatar.jpg" },
 		loginMethod: { type: String },
 		blockExpireDate: { type: Date },
 		blockReason: { type: String },

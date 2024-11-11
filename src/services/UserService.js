@@ -15,14 +15,19 @@ const checkBanStatus = (idUser) => {
 		const userAccount = await User.findById(idUser).select("blockExpireDate blockReason");
 
 		// Kiểm tra nếu tài khoản đang bị khóa
-		if (userAccount.blockExpireDate && new Date(userAccount.blockExpireDate) > new Date()) {
-			return resolve({
-				status: "BLOCKED",
-				message: "Tài khoản của bạn đã bị khóa tạm thời.",
-				isBlocked: true,
-				blockExpireDate: userAccount.blockExpireDate,
-				blockReason: userAccount.blockReason,
-			});
+		if (userAccount.blockExpireDate) {
+			if (userAccount.blockExpireDate && new Date(userAccount.blockExpireDate) > new Date()) {
+				return resolve({
+					status: "BLOCKED",
+					message: "Tài khoản của bạn đã bị khóa tạm thời.",
+					isBlocked: true,
+					blockExpireDate: userAccount.blockExpireDate,
+					blockReason: userAccount.blockReason,
+				});
+			} else {
+				//Cập nhật lại nếu blockExpireDate hết hạn
+				await User.findByIdAndUpdate(idUser, { blockExpireDate: null, blockReason: null }, { new: true });
+			}
 		} else {
 			if (userAccount.blockExpireDate && new Date(userAccount.blockExpireDate) > new Date()) {
 				await User.findByIdAndUpdate(idUser, { blockExpireDate: null, blockReason: null }, { new: true });
@@ -565,8 +570,6 @@ const infoUser = (userID) => {
 					},
 				},
 			]);
-
-			console.log("seller", { ...seller });
 
 			if (result?.password) {
 				const { password, ...user } = result; //destructuring

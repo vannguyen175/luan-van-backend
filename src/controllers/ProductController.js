@@ -57,23 +57,23 @@ const deleteProduct = (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
-const getAllProductsBySubCate = async (req, res) => {
-	try {
-		const { limit, page, sort, filter } = req.query;
-		const slug = req.params.slug; //subCategory's slug
-		const response = await ProductService.getAllProductsBySubCate(slug, Number(limit) || 10, Number(page) || 1, sort, filter);
-		return res.status(200).json(response);
-	} catch (error) {
-		return res.status(404).json({ message: error });
-	}
-};
+// const getAllProductsBySubCate = async (req, res) => {
+// 	try {
+// 		const { limit, page, sort, filter } = req.query;
+// 		const slug = req.params.slug; //subCategory's slug
+// 		const response = await ProductService.getAllProductsBySubCate(slug, Number(limit) || 10, Number(page) || 1, sort, filter);
+// 		return res.status(200).json(response);
+// 	} catch (error) {
+// 		return res.status(404).json({ message: error });
+// 	}
+// };
 
 const getAllProducts = async (req, res) => {
 	try {
-		const { state, cate, subCate, sort, seller } = req.body.data;
+		const { state, cate, subCate, sort, seller, province, price, isUsed } = req.body.data;
 		const page = req.query.page || 1;
 		const limit = req.query.limit || 5;
-		const response = await ProductService.getAllProducts(state, cate, subCate, page, limit, sort, seller);
+		const response = await ProductService.getAllProducts(state, cate, subCate, page, limit, sort, seller, province, price, isUsed);
 		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });
@@ -102,7 +102,7 @@ module.exports = {
 	createProduct,
 	updateProduct,
 	deleteProduct,
-	getAllProductsBySubCate,
+	//getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
 	getProductSeller,

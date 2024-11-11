@@ -26,6 +26,8 @@ const uploadImage = async (images) => {
 const createProduct = async (newProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			console.log("newProduct", newProduct);
+
 			const data_subCategory = await SubCategory.find({ slug: newProduct.subCategory });
 			const newImages = await uploadImage(newProduct.images);
 			if (newImages) {
@@ -52,7 +54,7 @@ const createProduct = async (newProduct) => {
 							{ new: true }
 						);
 					} else {
-						await Seller.create({ idUser: checkSellerExist.idUser, totalProduct: 1 });
+						await Seller.create({ idUser: newProduct.idUser, totalProduct: 1 });
 					}
 				}
 				resolve({
@@ -131,95 +133,97 @@ const deleteProduct = () => {
 
 //url: /product/getAll/:slug      (slug: subCategory's slug)
 //chỉ lấy những sp đã duyệt
-const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
-	return new Promise(async (resolve, reject) => {
-		const id_subCategory = await SubCategory.findOne({ slug: slug });
-		if (id_subCategory === null) {
-			resolve({
-				status: "ERROR",
-				message: "Sub-category is not exist",
-				data: createProduct,
-			});
-		}
-		const id = id_subCategory._id;
+// const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
+// 	return new Promise(async (resolve, reject) => {
+// 		const id_subCategory = await SubCategory.findOne({ slug: slug });
+// 		if (id_subCategory === null) {
+// 			resolve({
+// 				status: "ERROR",
+// 				message: "Sub-category is not exist",
+// 				data: createProduct,
+// 			});
+// 		}
+// 		const id = id_subCategory._id;
 
-		try {
-			const totalProducts = await Product.find({
-				subCategory: id,
-				statePost: "approved",
-				selled: false,
-			}).countDocuments(); //tong san pham co trong sub-category
+// 		try {
+// 			const totalProducts = await Product.find({
+// 				subCategory: id,
+// 				statePost: "approved",
+// 				selled: false,
+// 			}).countDocuments(); //tong san pham co trong sub-category
 
-			if (sort) {
-				const objectSort = {};
-				objectSort[sort[1]] = sort[0]; //url: ...sort=asc&sort=price
-				const result = await Product.find({
-					subCategory: id,
-					statePost: "approved",
-					selled: false,
-				})
-					.limit(limit)
-					.skip(limit * (page - 1))
-					.sort(objectSort);
+// 			if (sort) {
+// 				const objectSort = {};
+// 				objectSort[sort[1]] = sort[0]; //url: ...sort=asc&sort=price
+// 				const result = await Product.find({
+// 					subCategory: id,
+// 					statePost: "approved",
+// 					selled: false,
+// 				})
+// 					.limit(limit)
+// 					.skip(limit * (page - 1))
+// 					.sort(objectSort);
 
-				resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-					totalProducts: totalProducts,
-					pageCurrent: page,
-					totalPages: Math.ceil(totalProducts / limit),
-				});
-			} else if (filter) {
-				//url: ...filter=name&filter=iphone44
-				const label = filter[0];
-				const result = await Product.find({
-					subCategory: id,
-					statePost: "approved",
-					selled: false,
-					[label]: { $regex: filter[1] },
-				})
-					.limit(limit)
-					.skip(limit * (page - 1));
+// 				resolve({
+// 					status: "OK",
+// 					message: "SUCCESS",
+// 					data: result,
+// 					totalProducts: totalProducts,
+// 					pageCurrent: page,
+// 					totalPages: Math.ceil(totalProducts / limit),
+// 				});
+// 			} else if (filter) {
+// 				//url: ...filter=name&filter=iphone44
+// 				const label = filter[0];
+// 				const result = await Product.find({
+// 					subCategory: id,
+// 					statePost: "approved",
+// 					selled: false,
+// 					[label]: { $regex: filter[1] },
+// 				})
+// 					.limit(limit)
+// 					.skip(limit * (page - 1));
 
-				resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-					totalProducts: totalProducts,
-					pageCurrent: page,
-					totalPages: Math.ceil(totalProducts / limit),
-				});
-			} else {
-				const result = await Product.find({
-					subCategory: slug,
-					statePost: "approved",
-					selled: false,
-				})
-					.limit(limit)
-					.skip(limit * (page - 1));
-				resolve({
-					status: "OK",
-					message: "SUCCESS",
-					data: result,
-					totalProducts: totalProducts,
-					pageCurrent: page,
-					totalPages: Math.ceil(totalProducts / limit),
-				});
-			}
-		} catch (error) {
-			reject(error);
-			console.log(error);
-		}
-	});
-};
+// 				resolve({
+// 					status: "OK",
+// 					message: "SUCCESS",
+// 					data: result,
+// 					totalProducts: totalProducts,
+// 					pageCurrent: page,
+// 					totalPages: Math.ceil(totalProducts / limit),
+// 				});
+// 			} else {
+// 				const result = await Product.find({
+// 					subCategory: slug,
+// 					statePost: "approved",
+// 					selled: false,
+// 				})
+// 					.limit(limit)
+// 					.skip(limit * (page - 1));
+// 				resolve({
+// 					status: "OK",
+// 					message: "SUCCESS",
+// 					data: result,
+// 					totalProducts: totalProducts,
+// 					pageCurrent: page,
+// 					totalPages: Math.ceil(totalProducts / limit),
+// 				});
+// 			}
+// 		} catch (error) {
+// 			reject(error);
+// 			console.log(error);
+// 		}
+// 	});
+// };
 
 //lấy tất cả sản phẩm (luôn lấy mới nhất)
-const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
+const getAllProducts = (state, cate, subCate, page, limit, sort, seller, province, price, isUsed) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const perPage = limit; //Số items trên 1 page
-			const query = {};
+			let query = {};
+			let sortOption = {};
+
 			if (state.length > 0) {
 				query.statePost = { $in: state };
 			}
@@ -227,11 +231,43 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 			if (seller) {
 				query.idUser = seller;
 			}
-			//có lọc subCate hoặc Cate (có phân trang)
+			if (province) {
+				query["address.province"] = province;
+			}
+			if (sort) {
+				if (sort === "Cũ nhất") {
+					sortOption = { _id: 1 };
+				} else {
+					sortOption = { _id: -1 };
+				}
+			}
+			//price: ["Cao nhất", "Thấp nhất", "Dưới 1 triệu", "Từ 1-5 triệu", "Trên 5 triệu"],
+			if (price) {
+				if (price === "Cao nhất") {
+					sortOption = { price: -1 };
+				} else if (price === "Thấp nhất") {
+					sortOption = { price: 1 };
+				} else if (price === "Dưới 1 triệu") {
+					query.price = { $lt: 1000000 };
+				} else if (price === "Từ 1-5 triệu") {
+					query.price = { $gte: 1000000, $lte: 5000000 };
+				} else if (price === "Trên 5 triệu") {
+					query.price = { $gt: 5000000 };
+				}
+			}
 
+			if (isUsed) {
+				if (isUsed === "Mới") {
+					query.stateProduct = "new";
+				} else {
+					query.stateProduct = "used";
+				}
+			}
+
+			//có lọc subCate hoặc Cate (có phân trang)
 			if (subCate.length > 0 || cate.length > 0) {
 				let products = await Product.find(query)
-					.sort({ _id: -1 }) //lấy dữ liệu mới nhất
+					.sort(sortOption || { _id: -1 }) //lấy dữ liệu mới nhất
 					.populate({
 						path: "subCategory",
 						model: "Sub_category",
@@ -256,7 +292,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller) => {
 					status: "OK",
 					message: "Lấy tất cả sản phẩm thành công!",
 					data: paginatedProducts,
-					totalData: products.length,
+					totalCount: products.length,
 				});
 			} else {
 				//lấy tất cả dữ liệu (có phân trang)
@@ -360,7 +396,7 @@ module.exports = {
 	createProduct,
 	updateProduct,
 	deleteProduct,
-	getAllProductsBySubCate,
+	//getAllProductsBySubCate,
 	getAllProducts,
 	detailProduct,
 	getProductSeller,

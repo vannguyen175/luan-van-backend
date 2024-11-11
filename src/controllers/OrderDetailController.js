@@ -64,8 +64,8 @@ const cancelOrder = async (req, res) => {
 
 const searchOrderDetail = async (req, res) => {
 	try {
-		const { productName, buyerName, idSeller, status } = req.body.data;
-		const response = await OrderDetailService.searchOrderDetail(productName, buyerName, idSeller, status);
+		const { query, idSeller, status } = req.body.data;
+		const response = await OrderDetailService.searchOrderDetail(query, idSeller, status);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
