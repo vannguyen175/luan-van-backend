@@ -91,7 +91,7 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 
 			//kiểm tra + cập nhật trạng thái 5 phút của state "đang vận chuyển" và "đang giao hàng"
 			const now = new Date();
-			const fiveMinutesAgo = new Date(now - 5 * 60000);
+			const fiveMinutesAgo = new Date(now - 1 * 60000);
 
 			// Cập nhật trạng thái từ "Đang vận chuyển" sang "Giao hàng"
 			await OrderDetail.updateMany(
@@ -207,7 +207,7 @@ const searchOrderDetail = (query, idSeller, status) => {
 			let orders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] }, searchQuery)
 				.populate({
 					path: "idProduct",
-				//	match: { name: { $regex: productName, $options: "i" } },
+					//	match: { name: { $regex: productName, $options: "i" } },
 					select: "images name sellerName",
 					populate: {
 						path: "subCategory",
@@ -221,7 +221,7 @@ const searchOrderDetail = (query, idSeller, status) => {
 					select: "shippingDetail idBuyer paymentMethod",
 					populate: {
 						path: "idBuyer",
-					//	match: { name: { $regex: buyerName, $options: "i" } },
+						//	match: { name: { $regex: buyerName, $options: "i" } },
 						select: "name",
 					},
 				});
@@ -258,21 +258,19 @@ const updateOrderDetail = (idOrder, data) => {
 				});
 			} else {
 				//đơn hàng đã được người bán chấp nhận => bán thành công
+
 				if (data.status === "1") {
+					console.log("checkOrder", checkOrder);
+
 					await Seller.findOneAndUpdate(
-						{ idUser: checkOrder.idOrder.idBuyer },
-						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } }
-					); //tăng totalSelled thêm 1
-				} else if (data.status === "4") {
-					//đơn hàng bị hủy
-					await Seller.findOneAndUpdate(
-						{ idUser: checkOrder.idOrder.idBuyer },
-						{ $inc: { totalSold: -1, revenue: -(checkOrder.productPrice * checkOrder.quantity) } }
+						{ idUser: checkOrder.idSeller },
+						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } },
+						{ new: true }
 					); //tăng totalSelled thêm 1
 					await Product.findByIdAndUpdate(
 						checkOrder.idProduct,
 						{
-							$inc: { quantity: +checkOrder.quantity }, // Trừ dần số lượng từ quantity
+							$inc: { quantity: -checkOrder.quantity }, // Trừ dần số lượng từ quantity
 						},
 						{ new: true }
 					);

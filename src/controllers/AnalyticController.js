@@ -77,6 +77,40 @@ const analyticCategoryAdmin = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const analyticProductBuyer = async (req, res) => {
+	try {
+		const { idUser, typeDate, startDay } = req.body;
+
+		if (!idUser || !typeDate) {
+			return res.status(200).json({
+				status: "ERROR",
+				message: "Vui lòng nhập đầy đủ thông tin",
+			});
+		}
+		const response = await AnalyticService.analyticProductBuyer(idUser, typeDate, startDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+const analyticTotalPaid = async (req, res) => {
+	try {
+		const { idBuyer, typeDate, startDay } = req.body;
+
+		if (!idBuyer || !typeDate) {
+			return res.status(200).json({
+				status: "ERROR",
+				message: "Vui lòng nhập đầy đủ thông tin",
+			});
+		}
+		const response = await AnalyticService.analyticTotalPaid(idBuyer, typeDate, startDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
 
 module.exports = {
 	analyticProduct,
@@ -84,4 +118,6 @@ module.exports = {
 	analyticProductAdmin,
 	analyticOrderAdmin,
 	analyticCategoryAdmin,
+	analyticProductBuyer,
+	analyticTotalPaid,
 };

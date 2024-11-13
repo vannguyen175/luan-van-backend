@@ -15,6 +15,7 @@ const formatDate = (isoString) => {
 	return `${month}/${year}`;
 };
 
+//thống kê SP theo người bán
 const analyticProduct = (idUser, typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -102,6 +103,7 @@ const analyticProduct = (idUser, typeDate, startDay) => {
 		}
 	});
 };
+//thống kê đơn hàng theo người bán
 const analyticOrder = (idSeller, typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -194,6 +196,7 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 		}
 	});
 };
+//thống kê SP cho admin
 const analyticProductAdmin = (typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -281,6 +284,7 @@ const analyticProductAdmin = (typeDate, startDay) => {
 		}
 	});
 };
+//thống kê đơn hàng cho admin
 const analyticOrderAdmin = (typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -370,6 +374,7 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 		}
 	});
 };
+//thống kê danh mục cho admin
 const analyticCategoryAdmin = () => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -417,10 +422,197 @@ const analyticCategoryAdmin = () => {
 	});
 };
 
+//thống kê SP cho người mua
+const analyticProductBuyer = (idUser, typeDate, startDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let totalPaid = {};
+			let totalBrought = {};
+
+			//số lượng SP đã mua
+			const productBrought = await OrderDetail.find({
+				status: OrderStatus[3],
+			}).populate({
+				path: "idOrder",
+				match: { idBuyer: idUser },
+			});
+
+			const productBroughtCount = productBrought.filter((order) => order.idOrder !== null).length;
+
+			//.countDocuments(); // Đếm số tài liệu sau khi đã tìm và populate
+
+			//số lượng SP đang chờ xử lý
+			const productWaiting = await OrderDetail.find({
+				status: { $nin: [OrderStatus[3], OrderStatus[4]] },
+			}).populate({
+				path: "idOrder",
+				match: { idBuyer: idUser },
+			});
+			const productWaitingCount = productWaiting.filter((order) => order.idOrder !== null).length;
+
+			//số lượng SP đã hủy
+			const productCancel = await OrderDetail.find({
+				status: OrderStatus[4],
+			}).populate({
+				path: "idOrder",
+				match: { idBuyer: idUser },
+			});
+			const productCancelCount = productCancel.filter((order) => order.idOrder !== null).length;
+
+			//tổng tiền đã chi khi mua SP
+			totalPaid = await Order.aggregate([
+				{ $match: { idBuyer: new ObjectId(idUser) } },
+				{
+					$group: {
+						_id: null,
+						totalPaid: { $sum: "$totalPaid" },
+					},
+				},
+			]);
+
+			if (typeDate === "week") {
+				//hiển thị sản phẩm theo các ngày trong 1 tuần
+				const startOfWeek = new Date(startDay);
+				const endDay = new Date(startOfWeek);
+				endDay.setDate(startOfWeek.getDate() + 6);
+				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
+
+				//sản phẩm đã mua
+				allProducts = await OrderDetail.find({
+					createdAt: { $gte: startOfWeek, $lt: endOfWeek },
+					status: OrderStatus[3],
+				}).populate({
+					path: "idOrder",
+					match: { idBuyer: idUser },
+				});
+
+				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
+					totalProduct = allProducts.filter((item) => {
+						const productBrougthDate = new Date(item.createdAt);
+						return productBrougthDate.toDateString() === date.toDateString();
+					});
+					totalBrought[date.toDateString()] = totalProduct.length;
+				}
+			} else if (typeDate === "month") {
+				//hiển thị sản phẩm theo 12 tháng gần nhất
+				const current = new Date();
+				const currentMonth = current.getMonth();
+				const currentYear = current.getFullYear();
+
+				const months = [];
+
+				for (let i = 0; i < 12; i++) {
+					const month = (currentMonth - i + 12) % 12;
+					const year = currentYear - Math.floor((i + 12 - currentMonth) / 12);
+					const monthString = `${month + 1}/${year}`;
+					months.push(monthString);
+				}
+				//sản phẩm đã mua
+				const data = await OrderDetail.find({
+					status: OrderStatus[3],
+				}).populate({
+					path: "idOrder",
+					match: { idBuyer: idUser },
+				});
+
+				let allProducts = data.filter((order) => order.idOrder !== null);
+
+				months.reverse().forEach((month) => {
+					const ProductsInMonth = allProducts.filter((item) => {
+						const orderMonth = new Date(item.idOrder.createdAt);
+						return formatDate(orderMonth) === month;
+					});
+					totalBrought[month] = ProductsInMonth.length;
+				});
+			}
+
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê sản phẩm đã mua thành công!",
+					stateOrders: {
+						brought: productBroughtCount,
+						waiting: productWaitingCount,
+						cancel: productCancelCount,
+					},
+					totalPaid: totalPaid[0].totalPaid,
+					totalBrought: totalBrought || [],
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticOrder service: ${error}`);
+		}
+	});
+};
+
+//thống kê tổng chi của người mua
+const analyticTotalPaid = (idBuyer, typeDate, startDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let totalPaidChart = {};
+			if (typeDate === "week") {
+				const startOfWeek = new Date(startDay);
+				const endDay = new Date(startOfWeek);
+				endDay.setDate(startOfWeek.getDate() + 6);
+				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
+
+				//doanh thu đơn hàng
+				allOrders = await Order.find({
+					idBuyer: idBuyer,
+					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
+				}).select("createdAt totalPaid");
+
+				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
+					const res = allOrders.filter((item) => {
+						const orderCheck = new Date(item.createdAt);
+						return orderCheck.toDateString() === date.toDateString();
+					});
+					const totalRevenueForDay = res.reduce((total, item) => total + item.totalPaid, 0);
+					totalPaidChart[date.toDateString()] = totalRevenueForDay;
+				}
+			} else if (typeDate === "month") {
+				//hiển thị sản phẩm theo 12 tháng gần nhất
+				const current = new Date();
+				const currentMonth = current.getMonth();
+				const currentYear = current.getFullYear();
+				const months = [];
+				for (let i = 0; i < 12; i++) {
+					const month = (currentMonth - i + 12) % 12;
+					const year = currentYear - Math.floor((i + 12 - currentMonth) / 12);
+					const monthString = `${month + 1}/${year}`;
+					months.push(monthString);
+				}
+				//doanh thu đơn hàng
+				allOrders = await Order.find({ idBuyer: idBuyer }).select("createdAt totalPaid");
+				months.reverse().forEach((month) => {
+					const res = allOrders.filter((item) => {
+						const orderMonth = new Date(item.createdAt);
+						return formatDate(orderMonth) === month;
+					});
+					const RevenueInMonth = res.reduce((total, item) => total + item.totalPaid, 0);
+					totalPaidChart[month] = RevenueInMonth;
+				});
+			}
+
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê tổng chi tiêu thành công!",
+					totalPaidChart: totalPaidChart || [],
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticOrder service: ${error}`);
+		}
+	});
+};
+
 module.exports = {
 	analyticProduct,
 	analyticOrder,
 	analyticProductAdmin,
 	analyticOrderAdmin,
 	analyticCategoryAdmin,
+	analyticProductBuyer,
+	analyticTotalPaid,
 };
