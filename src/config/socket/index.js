@@ -12,10 +12,25 @@ const io = new Server({
 	},
 });
 
+// const io = require("socket.io")(server, {
+// 	cors: {
+// 		origin: "http://localhost:3006",
+// 	},
+// });
+
 let onlineUsers = [];
 
+// const addNewUser = (userId, socketId) => {
+// 	!onlineUsers.some((user) => user.userId === userId) && onlineUsers.push({ userId, socketId });
+// };
+
 const addNewUser = (userId, socketId) => {
-	!onlineUsers.some((user) => user.userId === userId) && onlineUsers.push({ userId, socketId });
+	const existingUser = onlineUsers.find((user) => user.userId === userId);
+	if (existingUser) {
+		existingUser.socketId = socketId; // Cập nhật ID mới nếu user đã có trong danh sách
+	} else {
+		onlineUsers.push({ userId, socketId }); // Thêm user mới nếu chưa có
+	}
 };
 
 const removeUser = (socketId) => {
@@ -27,12 +42,31 @@ const getUser = (userId) => {
 };
 
 const onConnection = (socket) => {
-	socket.on("newUser", (userId) => {
-		addNewUser(userId, socket.id);
+	//console.log("New client connected " + socket.id);
+	const idUser = socket.handshake.query.idUser; //lấy idUser từ param
+	if (idUser !== "null" && idUser !== undefined) {
+		addNewUser(idUser, socket.id);
+	}
+	//gửi sự kiện "getId" từ server tới client | emit = gửi
+	//socket.emit("getId", { idSocket: socket.id, idUser: idUser });
+
+	//sendDataClient: lắng nghe data từ client
+	//sendDataServer: phát data đó từ server đến tất cả các clients
+	socket.on("sendMessageClient", function (data) {
+		const receiverUser = getUser(data.receiver);
+
+		if (receiverUser && receiverUser.socketId) {
+			io.to(receiverUser.socketId).emit("sendMessageServer", { data });
+		}
+		//io.emit("sendMessageServer", { data });
 	});
 
+	// socket.on("newUser", (userId) => {
+	// 	addNewUser(userId, socket.id);
+	// });
+
 	socket.on("disconnect", (socket) => {
-		//removeUser(socket.id);
+		removeUser(socket.id);
 	});
 };
 

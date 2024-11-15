@@ -543,6 +543,12 @@ const infoUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const result = await User.findById(userID);
+			if (result === null) {
+				resolve({
+					status: "ERROR",
+					message: "Không tồn tại user",
+				});
+			}
 
 			const address = await Address.findOne({ user: userID });
 			const seller = await Seller.findOne({ idUser: userID });
