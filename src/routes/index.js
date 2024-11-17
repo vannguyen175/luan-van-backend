@@ -9,6 +9,7 @@ const orderDetailRoute = require("./OrderDetailRoute");
 const analyticRoute = require("./AnalyticRoute");
 const ratingRoute = require("./RatingRoute");
 const paymentRoute = require("./PaymentRoute");
+const messageRoute = require("./MessageRoute");
 
 const routes = (app) => {
 	app.use("/api/user", userRoute);
@@ -21,7 +22,8 @@ const routes = (app) => {
 	app.use("/api/order-detail", orderDetailRoute);
 	app.use("/api/analytic", analyticRoute);
 	app.use("/api/rating", ratingRoute);
-	app.use("/api/payment", paymentRoute);
+	app.use("/api/rating", ratingRoute);
+	app.use("/api/message", messageRoute);
 };
 
 module.exports = routes;

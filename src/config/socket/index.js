@@ -4,6 +4,7 @@ const productService = require("../../services/ProductService");
 const orderService = require("../../services/OrderService");
 const orderDetailService = require("../../services/OrderDetailService");
 const ratingService = require("../../services/RatingService");
+const messageService = require("../../services/MessageService");
 
 // SOCKET.IO
 const io = new Server({
@@ -12,17 +13,7 @@ const io = new Server({
 	},
 });
 
-// const io = require("socket.io")(server, {
-// 	cors: {
-// 		origin: "http://localhost:3006",
-// 	},
-// });
-
 let onlineUsers = [];
-
-// const addNewUser = (userId, socketId) => {
-// 	!onlineUsers.some((user) => user.userId === userId) && onlineUsers.push({ userId, socketId });
-// };
 
 const addNewUser = (userId, socketId) => {
 	const existingUser = onlineUsers.find((user) => user.userId === userId);
@@ -41,29 +32,34 @@ const getUser = (userId) => {
 	return onlineUsers.find((user) => user.userId === userId.toString());
 };
 
+const addChat = async (data) => {
+	if (data.sender || data.receiver || data.content) {
+		//lưu tin nhắn vào database
+		await messageService.addChat(data.sender, data.receiver, data.content);
+	}
+};
+
 const onConnection = (socket) => {
-	//console.log("New client connected " + socket.id);
 	const idUser = socket.handshake.query.idUser; //lấy idUser từ param
 	if (idUser !== "null" && idUser !== undefined) {
 		addNewUser(idUser, socket.id);
 	}
-	//gửi sự kiện "getId" từ server tới client | emit = gửi
-	//socket.emit("getId", { idSocket: socket.id, idUser: idUser });
+
+	//gửi socket đển người nhận
+	io.to(socket.id).emit("sendID", socket.id);
 
 	//sendDataClient: lắng nghe data từ client
 	//sendDataServer: phát data đó từ server đến tất cả các clients
 	socket.on("sendMessageClient", function (data) {
 		const receiverUser = getUser(data.receiver);
+		console.log("receiverUser", receiverUser);
 
+		addChat(data);
+		//gửi socket đển người nhận
 		if (receiverUser && receiverUser.socketId) {
 			io.to(receiverUser.socketId).emit("sendMessageServer", { data });
 		}
-		//io.emit("sendMessageServer", { data });
 	});
-
-	// socket.on("newUser", (userId) => {
-	// 	addNewUser(userId, socket.id);
-	// });
 
 	socket.on("disconnect", (socket) => {
 		removeUser(socket.id);
@@ -76,21 +72,6 @@ orderDetailService.socket(io, getUser);
 ratingService.socket(io, getUser);
 
 io.on("connection", onConnection);
-
-// io.on("connection", (socket) => {
-// 	socket.on("newUser", (userId) => {
-// 		addNewUser(userId, socket.id);
-// 	});
-// 	socket.on("sendNotification", ({ senderId, reveiverId }) => {
-// 		const reveiver = getUser(reveiverId);
-
-// 		io.to(reveiver.socketId).emit("getNotification", { senderId });
-// 	 });
-// 	socket.on("sendNotification");
-// 	socket.on("disconnect", (socket) => {
-// 		//removeUser(socket.id);
-// 	});
-// });
 
 io.listen(5000);
 

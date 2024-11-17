@@ -9,7 +9,6 @@ const addressSchema = new mongoose.Schema(
 		address: { type: String },
 	},
 	{
-		new: true,
 		timestamps: false,
 	}
 );
