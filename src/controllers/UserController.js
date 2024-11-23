@@ -230,7 +230,7 @@ const getAllUsers = async (req, res) => {
 const getAllSellers = async (req, res) => {
 	try {
 		const page = req.query.page || 1;
-		const limit = req.query.limit || 5;
+		const limit = req.query.limit || 10;
 		const response = await UserService.getAllSellers(page, limit);
 		return res.status(200).json(response);
 	} catch (error) {

@@ -26,9 +26,11 @@ const createOrder = (newOrder) => {
 		try {
 			for (let index = 0; index < products.length; index++) {
 				const productCheck = await Product.findOne({ _id: products[index].idProduct });
-				if (productCheck.quantity < products[index].quantity) {
+				console.log(productCheck);
+
+				if (productCheck.quantityState < products[index].quantity) {
 					return resolve({
-						status: "error",
+						status: "ERROR",
 						message: "Có lỗi khi đặt hàng. Số lượng sản phẩm trong kho không đủ.",
 					});
 				}

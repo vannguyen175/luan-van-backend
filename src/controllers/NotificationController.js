@@ -14,7 +14,9 @@ const addNotification = async (req, res) => {
 const getNotification = async (req, res) => {
 	try {
 		const { user } = req.body; // Lấy dữ liệu từ body của yêu cầu
-		const response = await NotificationService.getNotification(user);
+		const page = req.query.page || 1;
+		const limit = req.query.limit || 10;
+		const response = await NotificationService.getNotification(user, page, limit);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log("error at controller: ", error);

@@ -2,7 +2,7 @@ const AnalyticService = require("../services/AnalyticService");
 
 const analyticProduct = async (req, res) => {
 	try {
-		const { idUser, typeDate, startDay } = req.body;
+		const { idUser, typeDate, startDay, endDay } = req.body;
 
 		if (!idUser || !typeDate) {
 			return res.status(200).json({
@@ -10,7 +10,7 @@ const analyticProduct = async (req, res) => {
 				message: "Vui lòng nhập đầy đủ thông tin",
 			});
 		}
-		const response = await AnalyticService.analyticProduct(idUser, typeDate, startDay);
+		const response = await AnalyticService.analyticProduct(idUser, typeDate, startDay, endDay);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
@@ -77,6 +77,26 @@ const analyticCategoryAdmin = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+const analyticCategorySeller = async (req, res) => {
+	try {
+		const { idUser, typeDate, startDay, endDay } = req.body;
+		const response = await AnalyticService.analyticCategorySeller(idUser, typeDate, startDay, endDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+const analyticCategoryRevenueSeller = async (req, res) => {
+	try {
+		const { idUser, typeDate, startDay, endDay } = req.body;
+		const response = await AnalyticService.analyticCategoryRevenueSeller(idUser, typeDate, startDay, endDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
 const analyticProductBuyer = async (req, res) => {
 	try {
 		const { idUser, typeDate, startDay } = req.body;
@@ -120,4 +140,6 @@ module.exports = {
 	analyticCategoryAdmin,
 	analyticProductBuyer,
 	analyticTotalPaid,
+	analyticCategorySeller,
+	analyticCategoryRevenueSeller,
 };

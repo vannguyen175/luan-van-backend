@@ -37,28 +37,30 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 					shippingPrice: products[index].shippingPrice,
 					isPaid: paymentMethod === "vnpay",
 					note: products[index]?.note,
+					quantityState: products[index].quantity,
 				});
 				//bán thành công => cập nhật (trừ) số lượng sản phẩm + trạng thái của sản phẩm
 				if (createDetailOrder) {
 					//nếu tạo đơn hàng thành công
-					const productStored = await Product.findOne({ _id: products[index].idProduct });
-					if (productStored.quantity >= products[index].quantity) {
-						await Product.findByIdAndUpdate(
-							products[index].idProduct,
-							{
-								$inc: { quantity: -products[index].quantity }, // Trừ dần số lượng từ quantity
-							},
-							{ new: true }
-						);
-					} else {
-						console.log("Không đủ số lượng sản phẩm trong kho.");
-					}
-					if (productStored.quantity == products[index].quantity) {
-						await Product.findByIdAndUpdate(products[index].idProduct, { statePost: "selled" }, { new: true });
-					}
+					
+					const productStored = await Product.findOneAndUpdate(
+						{
+							_id: products[index].idProduct,
+							quantityState: { $gte: products[index].quantity }, // Kiểm tra đủ số lượng
+						},
+						{
+							$inc: { quantityState: -products[index].quantity }, // Trừ số lượng
+							...(productStored.quantityState === products[index].quantity && { stateProduct: "selled" }),
+						},
+						{ new: true }
+					);
 
-					console.log("index", index, products[0].idSeller._id);
-					console.log("products[index].idSeller || products[index].idSeller._id", products[index].idSeller || products[index].idSeller._id);
+					if (!productStored) {
+						return resolve({
+							status: "ERROR",
+							message: "Đã xảy ra lỗi. Không đủ số lượng sản phẩm trong kho.",
+						});
+					}
 
 					//cập nhật số lượng SP bán thành công trong Seller modal
 					await Seller.findOneAndUpdate(
@@ -260,8 +262,6 @@ const updateOrderDetail = (idOrder, data) => {
 				//đơn hàng đã được người bán chấp nhận => bán thành công
 
 				if (data.status === "1") {
-					console.log("checkOrder", checkOrder);
-
 					await Seller.findOneAndUpdate(
 						{ idUser: checkOrder.idSeller },
 						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } },

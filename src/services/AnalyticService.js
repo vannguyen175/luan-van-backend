@@ -7,6 +7,8 @@ const Category = require("../models/CategoryModel");
 
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
+const format = require("date-format");
+const { detailProduct } = require("./ProductService");
 
 const formatDate = (isoString) => {
 	const date = new Date(isoString);
@@ -16,11 +18,10 @@ const formatDate = (isoString) => {
 };
 
 //thống kê SP theo người bán
-const analyticProduct = (idUser, typeDate, startDay) => {
+const analyticProduct = (idUser, typeDate, startDay, endDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const current = new Date();
-			let onSell = {};
 			let selled = {};
 			let totalPosted = null;
 			let totalSelled = null;
@@ -28,8 +29,9 @@ const analyticProduct = (idUser, typeDate, startDay) => {
 			let allProducts = {};
 
 			totalPosted = await Product.find({ idUser: idUser, statePost: { $in: ["approved", "selled"] } });
-			totalSelled = await OrderDetail.find({ idSeller: idUser });
+			totalSelled = await OrderDetail.find({ idSeller: idUser, status: "Đã giao" }); //lượt bán thành công
 			totalRejected = await Product.find({ idUser: idUser, statePost: { $in: ["rejected"] } });
+
 			if (typeDate === "week") {
 				//hiển thị sản phẩm theo các ngày trong 1 tuần
 				const startOfWeek = new Date(startDay);
@@ -37,23 +39,14 @@ const analyticProduct = (idUser, typeDate, startDay) => {
 				endDay.setDate(startOfWeek.getDate() + 6);
 				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
 
-				//sản phẩm đang bán
-				allProducts = await Product.find({ idUser: idUser, createdAt: { $gte: startOfWeek, $lt: endOfWeek } });
-				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
-					totalRevenue = allProducts.filter((item) => {
-						const postProductDate = new Date(item.createdAt);
-						return postProductDate.toDateString() === date.toDateString();
-					});
-					onSell[date.toDateString()] = totalRevenue.length;
-				}
 				//sản phẩm đã bán
-				allProducts = await Product.find({ idUser: idUser, updatedAt: { $gte: startOfWeek, $lt: endOfWeek } });
+				allProducts = await OrderDetail.find({ idSeller: idUser, updatedAt: { $gte: startOfWeek, $lt: endOfWeek }, status: "Đã giao" });
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					totalRevenue = allProducts.filter((item) => {
 						const postProductDate = new Date(item.updatedAt);
-						return postProductDate.toDateString() === date.toDateString() && item.statePost === "selled";
+						return postProductDate.toDateString() === date.toDateString();
 					});
-					selled[date.toDateString()] = totalRevenue.length;
+					selled[format("dd/MM/yyyy", date)] = totalRevenue.length;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -68,20 +61,12 @@ const analyticProduct = (idUser, typeDate, startDay) => {
 					const monthString = `${month + 1}/${year}`;
 					months.push(monthString);
 				}
-				//sản phẩm đang bán
-				let allProducts = await Product.find({ idUser: idUser });
+				//lượt bán ra
+				let allProducts = await OrderDetail.find({ idSeller: idUser, status: "Đã giao" });
 				months.reverse().forEach((month) => {
 					const ProductsInMonth = allProducts.filter((item) => {
-						const orderMonth = new Date(item.createdAt);
-						return formatDate(orderMonth) === month;
-					});
-					onSell[month] = ProductsInMonth.length;
-				});
-				//sản phẩm đã bán
-				months.forEach((month) => {
-					const ProductsInMonth = allProducts.filter((item) => {
 						const orderMonth = new Date(item.updatedAt);
-						return formatDate(orderMonth) === month && item.statePost === "selled";
+						return formatDate(orderMonth) === month;
 					});
 					selled[month] = ProductsInMonth.length;
 				});
@@ -91,7 +76,6 @@ const analyticProduct = (idUser, typeDate, startDay) => {
 				return resolve({
 					status: "SUCCESS",
 					message: "Thống kê sản phẩm thành công!",
-					onSell: onSell,
 					selled: selled,
 					totalPosted: totalPosted.length,
 					totalSelled: totalSelled.length,
@@ -115,7 +99,6 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 			let totalRevenue = {};
 			let totalRevenueChart = {};
 			//typeUser == "seller" && typeDate == "today" => Nhà bán hàng
-			const waitingOrders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[0] }).select("_id");
 			const approvedOrders = await OrderDetail.find({
 				idSeller: idSeller,
 				status: { $nin: [OrderStatus[0], OrderStatus[4]] },
@@ -123,7 +106,6 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 
 			const rejectedOrders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[4] }).select("_id");
 			stateOrders = {
-				waiting: waitingOrders.length,
 				approved: approvedOrders.length,
 				rejected: rejectedOrders.length,
 			};
@@ -149,14 +131,15 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 					idSeller: idSeller,
 					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
 					status: OrderStatus[3],
-				}).select("createdAt");
+				}).select("updatedAt productPrice");
+
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
-						const orderCheck = new Date(item.createdAt);
+						const orderCheck = new Date(item.updatedAt);
 						return orderCheck.toDateString() === date.toDateString();
 					});
 					const totalRevenueForDay = res.reduce((total, item) => total + item.productPrice, 0);
-					totalRevenueChart[date.toDateString()] = totalRevenueForDay;
+					totalRevenueChart[format("dd/MM/yyyy", date)] = totalRevenueForDay;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -171,10 +154,10 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 					months.push(monthString);
 				}
 				//doanh thu đơn hàng
-				allOrders = await OrderDetail.find({ idSeller: idSeller }).select("createdAt productPrice");
+				allOrders = await OrderDetail.find({ idSeller: idSeller }).select("updatedAt productPrice");
 				months.reverse().forEach((month) => {
 					const res = allOrders.filter((item) => {
-						const orderMonth = new Date(item.createdAt);
+						const orderMonth = new Date(item.updatedAt);
 						return formatDate(orderMonth) === month;
 					});
 					const RevenueInMonth = res.reduce((total, item) => total + item.productPrice, 0);
@@ -374,7 +357,7 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 		}
 	});
 };
-//thống kê danh mục cho admin
+//thống kê sản phẩm theo danh mục cho admin
 const analyticCategoryAdmin = () => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -385,18 +368,15 @@ const analyticCategoryAdmin = () => {
 				.select("name")
 				.populate({
 					path: "subCategory",
-					select: "name category",
+					model: "Sub_category",
+					foreignField: "slug",
 					populate: {
 						path: "category",
-						select: "name",
+						model: "Category",
+						foreignField: "slug",
 					},
 				});
-			// allProducts.forEach((product) => {
-			// 	const categoryName = product.subCategory?.category?.name;
-			// 	if (categoryName) {
-			// 		dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
-			// 	}
-			// });
+
 			allProducts.forEach((product) => {
 				const categoryName = product.subCategory?.category?.name;
 				const subCateName = product.subCategory?.name;
@@ -408,6 +388,190 @@ const analyticCategoryAdmin = () => {
 					dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
 				}
 			});
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê danh mục thành công!",
+					data: dataChart,
+					dataDetail: dataChartDetail,
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticCategoryAdmin service: ${error}`);
+		}
+	});
+};
+
+//thống kê sản phẩm theo danh mục cho seller
+const analyticCategorySeller = (idUser, typeDate, startDay, endDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let dataChart = {};
+			let dataChartDetail = {};
+
+			if (typeDate === "all") {
+				const allProducts = await OrderDetail.find({
+					idSeller: idUser,
+					status: "Đã giao",
+				})
+					.select("_id")
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					const categoryName = product.idProduct.subCategory?.category?.name;
+					const subCateName = product.idProduct.subCategory?.name;
+
+					if (categoryName && subCateName) {
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {};
+						}
+						dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
+						dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
+					}
+				});
+			} else {
+				const allProducts = await OrderDetail.find({
+					idSeller: idUser,
+					status: "Đã giao",
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+				})
+					.select("_id")
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					const categoryName = product.idProduct.subCategory?.category?.name;
+					const subCateName = product.idProduct.subCategory?.name;
+					if (categoryName && subCateName) {
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {};
+						}
+						dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
+						dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
+					}
+				});
+			}
+
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê danh mục thành công!",
+					data: dataChart,
+					dataDetail: dataChartDetail,
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticCategoryseller service: ${error}`);
+		}
+	});
+};
+//thống kê doanh thu theo danh mục cho admin
+const analyticCategoryRevenueSeller = (idUser, typeDate, startDay, endDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let dataChart = {};
+			let dataChartDetail = {};
+
+			if (typeDate === "all") {
+				const allProducts = await OrderDetail.find({
+					idSeller: idUser,
+					status: "Đã giao",
+				})
+					.select("_id quantity productPrice")
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					const categoryName = product.idProduct.subCategory?.category?.name;
+					const subCateName = product.idProduct.subCategory?.name;
+					const price = product?.productPrice || 0; // Giá của sản phẩm
+					const quantitySold = product.quantity || 0; // Số lượng bán được
+					if (categoryName && subCateName) {
+						const revenue = price * quantitySold;
+
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {};
+						}
+						dataChart[categoryName] = (dataChart[categoryName] || 0) + revenue;
+						dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + revenue;
+					}
+				});
+			} else {
+				const allProducts = await OrderDetail.find({
+					idSeller: idUser,
+					status: "Đã giao",
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+				})
+					.select("_id quantity productPrice")
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					const categoryName = product.idProduct.subCategory?.category?.name;
+					const subCateName = product.idProduct.subCategory?.name;
+					const price = product?.productPrice || 0; // Giá của sản phẩm
+					const quantitySold = product.quantity || 0; // Số lượng bán được
+					if (categoryName && subCateName) {
+						const revenue = price * quantitySold;
+
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {};
+						}
+						dataChart[categoryName] = (dataChart[categoryName] || 0) + revenue;
+						dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + revenue;
+					}
+				});
+			}
+
 			{
 				return resolve({
 					status: "SUCCESS",
@@ -615,4 +779,6 @@ module.exports = {
 	analyticCategoryAdmin,
 	analyticProductBuyer,
 	analyticTotalPaid,
+	analyticCategorySeller,
+	analyticCategoryRevenueSeller,
 };

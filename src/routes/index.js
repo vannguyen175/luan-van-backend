@@ -22,7 +22,7 @@ const routes = (app) => {
 	app.use("/api/order-detail", orderDetailRoute);
 	app.use("/api/analytic", analyticRoute);
 	app.use("/api/rating", ratingRoute);
-	app.use("/api/rating", ratingRoute);
+	app.use("/api/payment", paymentRoute);
 	app.use("/api/message", messageRoute);
 };
 

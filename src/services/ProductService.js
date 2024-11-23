@@ -26,8 +26,6 @@ const uploadImage = async (images) => {
 const createProduct = async (newProduct) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log("newProduct", newProduct);
-
 			const data_subCategory = await SubCategory.find({ slug: newProduct.subCategory });
 			const newImages = await uploadImage(newProduct.images);
 			if (newImages) {
@@ -41,22 +39,9 @@ const createProduct = async (newProduct) => {
 					info: newProduct.info,
 					stateProduct: newProduct?.stateProduct,
 					quantity: newProduct.quantity,
-					statePost: newProduct.totalSold >= 2 ? "approved" : "waiting",
+					statePost: "waiting",
 				});
-				if (createProduct) {
-					const checkSellerExist = await Seller.findOne({ idUser: newProduct.idUser });
-					if (checkSellerExist) {
-						await Seller.findByIdAndUpdate(
-							checkSellerExist._id,
-							{
-								$inc: { totalProduct: 1 },
-							},
-							{ new: true }
-						);
-					} else {
-						await Seller.create({ idUser: newProduct.idUser, totalProduct: 1 });
-					}
-				}
+
 				resolve({
 					status: "SUCCESS",
 					message: "Tạo bài đăng thành công",
@@ -92,6 +77,22 @@ const updateProduct = (productID, data) => {
 				const updateProduct = await Product.findByIdAndUpdate(productID, data, {
 					new: true,
 				});
+
+				//nếu phê duyệt sản phẩm => tăng totalProduct của seller lên 1
+				if (updateProduct && data.status === "approved") {
+					const checkSellerExist = await Seller.findOne({ idUser: updateProduct.idUser });
+					if (checkSellerExist) {
+						await Seller.findByIdAndUpdate(
+							checkSellerExist._id,
+							{
+								$inc: { totalProduct: 1 },
+							},
+							{ new: true }
+						);
+					} else {
+						await Seller.create({ idUser: updateProduct.idUser, totalProduct: 1 });
+					}
+				}
 
 				const userSocket = getUserSocketId(updateProduct.idUser);
 				const addNoti = await NotificationService.addNotification({
@@ -130,91 +131,6 @@ const deleteProduct = () => {
 		}
 	});
 };
-
-//url: /product/getAll/:slug      (slug: subCategory's slug)
-//chỉ lấy những sp đã duyệt
-// const getAllProductsBySubCate = (slug, limit, page, sort, filter) => {
-// 	return new Promise(async (resolve, reject) => {
-// 		const id_subCategory = await SubCategory.findOne({ slug: slug });
-// 		if (id_subCategory === null) {
-// 			resolve({
-// 				status: "ERROR",
-// 				message: "Sub-category is not exist",
-// 				data: createProduct,
-// 			});
-// 		}
-// 		const id = id_subCategory._id;
-
-// 		try {
-// 			const totalProducts = await Product.find({
-// 				subCategory: id,
-// 				statePost: "approved",
-// 				selled: false,
-// 			}).countDocuments(); //tong san pham co trong sub-category
-
-// 			if (sort) {
-// 				const objectSort = {};
-// 				objectSort[sort[1]] = sort[0]; //url: ...sort=asc&sort=price
-// 				const result = await Product.find({
-// 					subCategory: id,
-// 					statePost: "approved",
-// 					selled: false,
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1))
-// 					.sort(objectSort);
-
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			} else if (filter) {
-// 				//url: ...filter=name&filter=iphone44
-// 				const label = filter[0];
-// 				const result = await Product.find({
-// 					subCategory: id,
-// 					statePost: "approved",
-// 					selled: false,
-// 					[label]: { $regex: filter[1] },
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1));
-
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			} else {
-// 				const result = await Product.find({
-// 					subCategory: slug,
-// 					statePost: "approved",
-// 					selled: false,
-// 				})
-// 					.limit(limit)
-// 					.skip(limit * (page - 1));
-// 				resolve({
-// 					status: "OK",
-// 					message: "SUCCESS",
-// 					data: result,
-// 					totalProducts: totalProducts,
-// 					pageCurrent: page,
-// 					totalPages: Math.ceil(totalProducts / limit),
-// 				});
-// 			}
-// 		} catch (error) {
-// 			reject(error);
-// 			console.log(error);
-// 		}
-// 	});
-// };
 
 //lấy tất cả sản phẩm (luôn lấy mới nhất)
 const getAllProducts = (state, cate, subCate, page, limit, sort, seller, province, price, isUsed) => {

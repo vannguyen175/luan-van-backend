@@ -65,7 +65,7 @@ const addNotification = async (data) => {
 		}
 	});
 };
-const getNotification = async (user) => {
+const getNotification = async (user, page, limit) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let unseenCount = 0;

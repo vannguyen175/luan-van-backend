@@ -27,6 +27,8 @@ router.get("/refund", function (req, res, next) {
 });
 
 router.post("/create_payment_url", function (req, res, next) {
+	console.log("TEST create_payment_url");
+
 	let ipAddr = req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
 
 	let config = require("../config/default.json");

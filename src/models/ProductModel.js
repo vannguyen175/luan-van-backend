@@ -28,9 +28,10 @@ const productSchema = new mongoose.Schema(
 		},
 		statePost: {
 			type: String,
-			enum: ["waiting", "approved", "reject", "selled"],
+			enum: ["waiting", "approved", "reject", "selled", "closed"],
 			default: "waiting",
 		},
+		quantityState: { type: Number, required: true }, //trạng thái số lượng trong kho
 		rejectReason: { type: String },
 	},
 	{

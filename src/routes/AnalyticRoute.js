@@ -7,6 +7,8 @@ router.post("/order", analyticController.analyticOrder);
 router.post("/product-admin", analyticController.analyticProductAdmin);
 router.post("/order-admin", analyticController.analyticOrderAdmin);
 router.get("/category-admin", analyticController.analyticCategoryAdmin);
+router.post("/category-seller", analyticController.analyticCategorySeller);
+router.post("/category-revenue-seller", analyticController.analyticCategoryRevenueSeller);
 router.post("/product-buyer", analyticController.analyticProductBuyer);
 router.post("/total-paid-buyer", analyticController.analyticTotalPaid);
 // router.put("/update", cartController.updateCart);

@@ -25,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
 				navigate: { type: String, require: true },
 				message: { type: String, require: true },
 				isSeen: { type: Boolean, require: true, default: false },
+				timestamp: { type: Date, default: Date.now }, // Thời gian gửi
 			},
 		], //seller, product
 	},

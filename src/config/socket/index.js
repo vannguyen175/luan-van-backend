@@ -44,7 +44,8 @@ const onConnection = (socket) => {
 	if (idUser !== "null" && idUser !== undefined) {
 		addNewUser(idUser, socket.id);
 	}
-
+	console.log("onlineUsers", onlineUsers.length);
+	0;
 	//gửi socket đển người nhận
 	io.to(socket.id).emit("sendID", socket.id);
 

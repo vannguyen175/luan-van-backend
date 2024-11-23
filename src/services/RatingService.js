@@ -16,10 +16,11 @@ const createRating = (review, score, idOrder, idProduct, idBuyer) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			//note: idOrder là idOrder của bảng OrderDetail not Order
-			const isExistProduct = await OrderDetail.findOne({ idProduct: idProduct }).populate({
+			const isExistProduct = await OrderDetail.findOne({ _id: idOrder }).populate({
 				path: "idProduct",
 				select: "images",
 			});
+			console.log(idOrder, isExistProduct);
 
 			const isExistBuyer = await Order.findOne({ idBuyer: idBuyer, _id: isExistProduct?.idOrder });
 			if (isExistProduct && isExistBuyer) {

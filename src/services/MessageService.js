@@ -1,4 +1,5 @@
 const Message = require("../models/MessageModel");
+const mongoose = require("mongoose");
 
 const addChat = async (sender, receiver, content) => {
 	return new Promise(async (resolve, reject) => {
@@ -16,6 +17,7 @@ const addChat = async (sender, receiver, content) => {
 								timestamp: new Date(),
 							},
 						},
+						isSeen: false,
 						$slice: -50, // Chỉ giữ lại 50 tin nhắn mới nhất
 					},
 					{ new: true }
@@ -49,6 +51,7 @@ const getChat = async (user1, user2) => {
 			const chat = await Message.findOne({ members: { $all: [user1, user2] } });
 
 			if (chat) {
+				await Message.findByIdAndUpdate(chat._id, { isSeen: true }, { new: true });
 				resolve({
 					status: "SUCCESS",
 					message: "Lấy danh sách tin nhắn thành công!",
@@ -67,17 +70,19 @@ const getChat = async (user1, user2) => {
 	});
 };
 
-const chatIsSeen = async (user1, user2) => {
+const getChatUnseen = async (idUser) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const chat = await Message.findOne({ members: { $all: [user1, user2] } });
+			const chats = await Message.find({ members: idUser, isSeen: false });
 
-			if (chat) {
-				const chatUpdated = await Message.findByIdAndUpdate(chat._id, { isSeen: true }, { new: true });
+			//result: mảng chứa các id của users đang chat với idUser
+			const result = chats.map((chat) => chat.members.filter((member) => !member.equals(new mongoose.Types.ObjectId(idUser))));
+
+			if (chats) {
 				resolve({
 					status: "SUCCESS",
-					message: "Hội thoại đã được xem.",
-					data: chatUpdated,
+					message: "Lấy tất cả cuộc hội thoại chưa được xem.",
+					data: result,
 				});
 			} else {
 				resolve({
@@ -86,7 +91,7 @@ const chatIsSeen = async (user1, user2) => {
 				});
 			}
 		} catch (error) {
-			console.log("Error at chatIsSeen-service", error);
+			console.log("Error at getChatUnseen-service", error);
 			reject(error);
 		}
 	});
@@ -95,5 +100,5 @@ const chatIsSeen = async (user1, user2) => {
 module.exports = {
 	addChat,
 	getChat,
-	chatIsSeen,
+	getChatUnseen,
 };

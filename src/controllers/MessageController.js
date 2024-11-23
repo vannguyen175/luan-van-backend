@@ -11,10 +11,11 @@ const getChat = async (req, res) => {
 	}
 };
 
-const chatIsSeen = async (req, res) => {
+//update chat từ unseen thành seen
+const getChatUnseen = async (req, res) => {
 	try {
-		const { user1, user2 } = req.params; // Lấy dữ liệu từ body của yêu cầu
-		const response = await MessageService.chatIsSeen(user1, user2);
+		const idUser = req.params.id; // Lấy dữ liệu từ body của yêu cầu
+		const response = await MessageService.getChatUnseen(idUser);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log("error at chatIsSeen controller: ", error);
@@ -23,5 +24,5 @@ const chatIsSeen = async (req, res) => {
 };
 module.exports = {
 	getChat,
-	chatIsSeen,
+	getChatUnseen,
 };
