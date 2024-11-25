@@ -39,6 +39,7 @@ const createProduct = async (newProduct) => {
 					info: newProduct.info,
 					stateProduct: newProduct?.stateProduct,
 					quantity: newProduct.quantity,
+					quantityState: newProduct.quantity,
 					statePost: "waiting",
 				});
 

@@ -29,7 +29,10 @@ const createCategory = (name) => {
 const searchCategory = (search) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const getAllCategory = await Category.find({ name: search });
+			const getAllCategory = await Category.find({
+				name: { $regex: search, $options: "i" }, 
+			});
+
 			if (getAllCategory) {
 				return resolve({
 					status: "SUCCESS",
@@ -82,17 +85,28 @@ const deleteCategory = (slug) => {
 			if (checkCategory === null) {
 				return resolve({
 					status: "ERROR",
-					message: "Category is not exists",
+					message: "Danh mục không tồn tại.",
 				});
-			}
+			} else {
+				const subCategories = await SubCategory.find({ category: checkCategory.slug });
+				console.log("subCategories", slug);
 
-			const deleteCategory = await Category.findOneAndDelete(slug);
+				if (subCategories.length > 0) {
+					return resolve({
+						status: "ERROR",
+						message: "Không thể xóa danh mục do chứa danh mục con.",
+					});
+				} else {
+					//subCategories.length == 0
+					const deleteCategory = await Category.findOneAndDelete({ slug: slug });
 
-			if (deleteCategory) {
-				return resolve({
-					status: "SUCCESS",
-					message: "Delete category successfully",
-				});
+					if (deleteCategory) {
+						return resolve({
+							status: "SUCCESS",
+							message: "Xóa danh mục thành công",
+						});
+					}
+				}
 			}
 		} catch (error) {
 			reject(error);

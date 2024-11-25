@@ -184,16 +184,15 @@ const analyticProductAdmin = (typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const current = new Date();
-			let onSell = {};
-			let selled = {};
+			let selled = {}; //lượt bán
 			let totalPosted = null;
 			let totalSelled = null;
 			let totalRejected = null;
 			let allProducts = {};
 
-			totalPosted = await Product.find({ statePost: { $in: ["approved", "selled"] } }).select("_id");
-			totalSelled = await Product.find({ statePost: { $in: ["selled"] } }).select("_id");
-			totalRejected = await Product.find({ statePost: { $in: ["rejected"] } }).select("_id");
+			totalPosted = await Product.find({ statePost: { $in: ["approved"] } }).select("_id");
+			totalSelled = await OrderDetail.find({ status: OrderStatus[3] }).select("_id");
+			totalRejected = await OrderDetail.find({ status: OrderStatus[4] }).select("_id");
 			if (typeDate === "week") {
 				//hiển thị sản phẩm theo các ngày trong 1 tuần
 				const startOfWeek = new Date(startDay);
@@ -201,23 +200,16 @@ const analyticProductAdmin = (typeDate, startDay) => {
 				endDay.setDate(startOfWeek.getDate() + 6);
 				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
 
-				//sản phẩm đang bán
-				allProducts = await Product.find({ createdAt: { $gte: startOfWeek, $lt: endOfWeek } }).select("createdAt");
-				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
-					totalRevenue = allProducts.filter((item) => {
-						const postProductDate = new Date(item.createdAt);
-						return postProductDate.toDateString() === date.toDateString();
-					});
-					onSell[date.toDateString()] = totalRevenue.length;
-				}
-				//sản phẩm đã bán
-				allProducts = await Product.find({ updatedAt: { $gte: startOfWeek, $lt: endOfWeek } }).select("createdAt");
+				//lượt bán thành công
+				allProducts = await OrderDetail.find({ status: OrderStatus[3], updatedAt: { $gte: startOfWeek, $lte: endOfWeek } }).select(
+					"updatedAt"
+				);
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					totalRevenue = allProducts.filter((item) => {
 						const postProductDate = new Date(item.updatedAt);
-						return postProductDate.toDateString() === date.toDateString() && item.statePost === "selled";
+						return postProductDate.toDateString() === date.toDateString();
 					});
-					selled[date.toDateString()] = totalRevenue.length;
+					selled[format("dd/MM/yyyy", date)] = totalRevenue.length;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -232,20 +224,13 @@ const analyticProductAdmin = (typeDate, startDay) => {
 					const monthString = `${month + 1}/${year}`;
 					months.push(monthString);
 				}
-				//sản phẩm đang bán
-				let allProducts = await Product.find({}).select("createdAt");
+
+				//lượt bán thành công
+				let allProducts = await OrderDetail.find({ status: OrderStatus[3] }).select("updatedAt");
 				months.reverse().forEach((month) => {
 					const ProductsInMonth = allProducts.filter((item) => {
-						const orderMonth = new Date(item.createdAt);
-						return formatDate(orderMonth) === month;
-					});
-					onSell[month] = ProductsInMonth.length;
-				});
-				//sản phẩm đã bán
-				months.forEach((month) => {
-					const ProductsInMonth = allProducts.filter((item) => {
 						const orderMonth = new Date(item.updatedAt);
-						return formatDate(orderMonth) === month && item.statePost === "selled";
+						return formatDate(orderMonth) === month;
 					});
 					selled[month] = ProductsInMonth.length;
 				});
@@ -255,7 +240,6 @@ const analyticProductAdmin = (typeDate, startDay) => {
 				return resolve({
 					status: "SUCCESS",
 					message: "Thống kê sản phẩm thành công!",
-					onSell: onSell,
 					selled: selled,
 					totalPosted: totalPosted.length,
 					totalSelled: totalSelled.length,
@@ -317,7 +301,7 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 						return orderCheck.toDateString() === date.toDateString();
 					});
 					const totalRevenueForDay = res.reduce((total, item) => total + item.productPrice, 0);
-					totalRevenueChart[date.toDateString()] = totalRevenueForDay;
+					totalRevenueChart[format("dd/MM/yyyy", date)] = totalRevenueForDay;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -358,36 +342,100 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 	});
 };
 //thống kê sản phẩm theo danh mục cho admin
-const analyticCategoryAdmin = () => {
+const analyticCategoryAdmin = (typeDate, startDay, endDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			let dataChart = {};
 			let dataChartDetail = {};
+			console.log("typeDate", typeDate);
 
-			const allProducts = await Product.find()
-				.select("name")
-				.populate({
-					path: "subCategory",
-					model: "Sub_category",
-					foreignField: "slug",
-					populate: {
-						path: "category",
-						model: "Category",
-						foreignField: "slug",
-					},
-				});
+			if (typeDate === "all") {
+				let allOrders = await OrderDetail.find({
+					status: OrderStatus[3],
+				})
+					.select("_id productPrice")
+					.populate({
+						path: "idProduct",
+						select: "_id",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
 
-			allProducts.forEach((product) => {
-				const categoryName = product.subCategory?.category?.name;
-				const subCateName = product.subCategory?.name;
-				if (categoryName && subCateName) {
-					if (!dataChartDetail[categoryName]) {
-						dataChartDetail[categoryName] = {};
+				allOrders.forEach((item) => {
+					const categoryName = item.idProduct.subCategory?.category?.name;
+					const subCateName = item.idProduct.subCategory?.name;
+					const price = item?.productPrice || 0; // Giá của sản phẩm
+
+					if (categoryName && subCateName) {
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {
+								count: {}, // Đếm số lượng đơn hàng
+								revenue: {}, // Tính tổng doanh thu
+							};
+						}
+						// Đếm số lượng đơn hàng theo danh mục
+						dataChart[categoryName] = dataChart[categoryName] || { count: 0, revenue: 0 }; // Khởi tạo nếu chưa có
+						dataChart[categoryName].count += 1; // Tăng số lượng đơn hàng
+						dataChart[categoryName].revenue += price; // Tăng doanh thu
+
+						// Đếm số lượng và doanh thu theo danh mục con
+						dataChartDetail[categoryName].count[subCateName] = (dataChartDetail[categoryName].count[subCateName] || 0) + 1; // Tăng số lượng
+						dataChartDetail[categoryName].revenue[subCateName] = (dataChartDetail[categoryName].revenue[subCateName] || 0) + price; // Tăng doanh thu
 					}
-					dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
-					dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
-				}
-			});
+				});
+			} else {
+				let allOrders = await OrderDetail.find({
+					status: OrderStatus[3],
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+				})
+					.select("_id productPrice")
+					.populate({
+						path: "idProduct",
+						select: "_id",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allOrders.forEach((item) => {
+					const categoryName = item.idProduct.subCategory?.category?.name;
+					const subCateName = item.idProduct.subCategory?.name;
+					const price = item?.productPrice || 0; // Giá của sản phẩm
+
+					if (categoryName && subCateName) {
+						if (!dataChartDetail[categoryName]) {
+							dataChartDetail[categoryName] = {
+								count: {}, // Đếm số lượng đơn hàng
+								revenue: {}, // Tính tổng doanh thu
+							};
+						}
+						// Đếm số lượng đơn hàng theo danh mục
+						dataChart[categoryName] = dataChart[categoryName] || { count: 0, revenue: 0 }; // Khởi tạo nếu chưa có
+						dataChart[categoryName].count += 1; // Tăng số lượng đơn hàng
+						dataChart[categoryName].revenue += price; // Tăng doanh thu
+
+						// Đếm số lượng và doanh thu theo danh mục con
+						dataChartDetail[categoryName].count[subCateName] = (dataChartDetail[categoryName].count[subCateName] || 0) + 1; // Tăng số lượng
+						dataChartDetail[categoryName].revenue[subCateName] = (dataChartDetail[categoryName].revenue[subCateName] || 0) + price; // Tăng doanh thu
+					}
+				});
+			}
+
 			{
 				return resolve({
 					status: "SUCCESS",
@@ -490,7 +538,7 @@ const analyticCategorySeller = (idUser, typeDate, startDay, endDay) => {
 		}
 	});
 };
-//thống kê doanh thu theo danh mục cho admin
+//thống kê doanh thu theo danh mục cho seller
 const analyticCategoryRevenueSeller = (idUser, typeDate, startDay, endDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
@@ -586,11 +634,215 @@ const analyticCategoryRevenueSeller = (idUser, typeDate, startDay, endDay) => {
 	});
 };
 
+//thống kê sản phẩm theo danh mục cho seller
+const analyticCategoryBuyer = (idUser, typeDate, startDay, endDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let dataChart = {};
+			let dataChartDetail = {};
+
+			if (typeDate === "all") {
+				const allProducts = await OrderDetail.find({
+					status: OrderStatus[3],
+				})
+					.select("_id")
+					.populate({
+						path: "idOrder",
+						select: "_id",
+						match: { idBuyer: idUser },
+					})
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					if (product.idOrder) {
+						const categoryName = product.idProduct.subCategory?.category?.name;
+						const subCateName = product.idProduct.subCategory?.name;
+
+						if (categoryName && subCateName) {
+							if (!dataChartDetail[categoryName]) {
+								dataChartDetail[categoryName] = {};
+							}
+							dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
+							dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
+						}
+					}
+				});
+			} else {
+				const allProducts = await OrderDetail.find({
+					status: OrderStatus[3],
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+				})
+					.select("_id")
+					.populate({
+						path: "idOrder",
+						select: "_id",
+						match: { idBuyer: idUser },
+					})
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((product) => {
+					if (product.idOrder) {
+						const categoryName = product.idProduct.subCategory?.category?.name;
+						const subCateName = product.idProduct.subCategory?.name;
+						if (categoryName && subCateName) {
+							if (!dataChartDetail[categoryName]) {
+								dataChartDetail[categoryName] = {};
+							}
+							dataChart[categoryName] = (dataChart[categoryName] || 0) + 1;
+							dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + 1;
+						}
+					}
+				});
+			}
+
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê danh mục thành công!",
+					data: dataChart,
+					dataDetail: dataChartDetail,
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticCategoryBuyer service: ${error}`);
+		}
+	});
+};
+//thống kê doanh thu theo danh mục cho seller
+const analyticCategoryRevenueBuyer = (idUser, typeDate, startDay, endDay) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			let dataChart = {};
+			let dataChartDetail = {};
+
+			if (typeDate === "all") {
+				const allProducts = await OrderDetail.find({
+					status: OrderStatus[3],
+				})
+					.select("_id")
+					.populate({
+						path: "idOrder",
+						select: "_id totalPaid",
+						match: { idBuyer: idUser },
+					})
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((item) => {
+					if (item.idOrder) {
+						const categoryName = item.idProduct.subCategory?.category?.name;
+						const subCateName = item.idProduct.subCategory?.name;
+
+						const price = item?.idOrder.totalPaid || 0; // Giá của sản phẩm
+						if (categoryName && subCateName) {
+							if (!dataChartDetail[categoryName]) {
+								dataChartDetail[categoryName] = {};
+							}
+							dataChart[categoryName] = (dataChart[categoryName] || 0) + price;
+							dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + price;
+						}
+					}
+				});
+			} else {
+				const allProducts = await OrderDetail.find({
+					status: OrderStatus[3],
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+				})
+					.select("_id")
+					.populate({
+						path: "idOrder",
+						select: "_id totalPaid",
+						match: { idBuyer: idUser },
+					})
+					.populate({
+						path: "idProduct",
+						select: "name",
+						populate: {
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						},
+					});
+
+				allProducts.forEach((item) => {
+					if (item.idOrder) {
+						const categoryName = item.idProduct.subCategory?.category?.name;
+						const subCateName = item.idProduct.subCategory?.name;
+						const price = item?.idOrder.totalPaid || 0; // Giá của order
+
+						if (categoryName && subCateName) {
+							if (!dataChartDetail[categoryName]) {
+								dataChartDetail[categoryName] = {};
+							}
+							dataChart[categoryName] = (dataChart[categoryName] || 0) + price;
+							dataChartDetail[categoryName][subCateName] = (dataChartDetail[categoryName][subCateName] || 0) + price;
+						}
+					}
+				});
+			}
+
+			{
+				return resolve({
+					status: "SUCCESS",
+					message: "Thống kê danh mục thành công!",
+					data: dataChart,
+					dataDetail: dataChartDetail,
+				});
+			}
+		} catch (error) {
+			console.log(`Have error at analyticCategoryAdmin service: ${error}`);
+		}
+	});
+};
+
 //thống kê SP cho người mua
 const analyticProductBuyer = (idUser, typeDate, startDay) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			let totalPaid = {};
+			let totalPaid = 0;
 			let totalBrought = {};
 
 			//số lượng SP đã mua
@@ -624,15 +876,18 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 			const productCancelCount = productCancel.filter((order) => order.idOrder !== null).length;
 
 			//tổng tiền đã chi khi mua SP
-			totalPaid = await Order.aggregate([
-				{ $match: { idBuyer: new ObjectId(idUser) } },
-				{
-					$group: {
-						_id: null,
-						totalPaid: { $sum: "$totalPaid" },
-					},
-				},
-			]);
+			const getData = await OrderDetail.find({ status: OrderStatus[3] })
+				.populate({
+					path: "idOrder",
+					match: { idBuyer: idUser },
+					select: "totalPaid",
+				})
+				.select("_id");
+
+			totalPaid = getData.reduce((sum, order) => {
+				// Chỉ cộng totalPaid nếu idOrder không null
+				return sum + (order.idOrder?.totalPaid || 0);
+			}, 0);
 
 			if (typeDate === "week") {
 				//hiển thị sản phẩm theo các ngày trong 1 tuần
@@ -642,20 +897,20 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
 
 				//sản phẩm đã mua
-				allProducts = await OrderDetail.find({
-					createdAt: { $gte: startOfWeek, $lt: endOfWeek },
+				const data = await OrderDetail.find({
+					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
 					status: OrderStatus[3],
 				}).populate({
 					path: "idOrder",
 					match: { idBuyer: idUser },
 				});
-
+				allProducts = data.filter((order) => order.idOrder !== null);
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					totalProduct = allProducts.filter((item) => {
-						const productBrougthDate = new Date(item.createdAt);
+						const productBrougthDate = new Date(item.updatedAt);
 						return productBrougthDate.toDateString() === date.toDateString();
 					});
-					totalBrought[date.toDateString()] = totalProduct.length;
+					totalBrought[format("dd/MM/yyyy", date)] = totalProduct.length;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -683,7 +938,7 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 
 				months.reverse().forEach((month) => {
 					const ProductsInMonth = allProducts.filter((item) => {
-						const orderMonth = new Date(item.idOrder.createdAt);
+						const orderMonth = new Date(item.idOrder.updatedAt);
 						return formatDate(orderMonth) === month;
 					});
 					totalBrought[month] = ProductsInMonth.length;
@@ -699,7 +954,7 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 						waiting: productWaitingCount,
 						cancel: productCancelCount,
 					},
-					totalPaid: totalPaid[0].totalPaid,
+					totalPaid: totalPaid,
 					totalBrought: totalBrought || [],
 				});
 			}
@@ -720,19 +975,24 @@ const analyticTotalPaid = (idBuyer, typeDate, startDay) => {
 				endDay.setDate(startOfWeek.getDate() + 6);
 				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
 
-				//doanh thu đơn hàng
-				allOrders = await Order.find({
-					idBuyer: idBuyer,
-					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
-				}).select("createdAt totalPaid");
+				//tổng tiền đã chi
+				allOrders = await OrderDetail.find({ status: OrderStatus[3], updatedAt: { $gte: startOfWeek, $lte: endOfWeek } })
+					.populate({
+						path: "idOrder",
+						match: { idBuyer: idBuyer },
+						select: "totalPaid",
+					})
+					.select("_id updatedAt");
 
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
-						const orderCheck = new Date(item.createdAt);
-						return orderCheck.toDateString() === date.toDateString();
+						if (item.idOrder) {
+							const orderCheck = new Date(item.updatedAt);
+							return orderCheck.toDateString() === date.toDateString();
+						}
 					});
-					const totalRevenueForDay = res.reduce((total, item) => total + item.totalPaid, 0);
-					totalPaidChart[date.toDateString()] = totalRevenueForDay;
+					const totalRevenueForDay = res.reduce((total, item) => total + item.idOrder.totalPaid, 0);
+					totalPaidChart[format("dd/MM/yyyy", date)] = totalRevenueForDay;
 				}
 			} else if (typeDate === "month") {
 				//hiển thị sản phẩm theo 12 tháng gần nhất
@@ -747,13 +1007,23 @@ const analyticTotalPaid = (idBuyer, typeDate, startDay) => {
 					months.push(monthString);
 				}
 				//doanh thu đơn hàng
-				allOrders = await Order.find({ idBuyer: idBuyer }).select("createdAt totalPaid");
+				allOrders = await OrderDetail.find({ status: OrderStatus[3] })
+					.populate({
+						path: "idOrder",
+						match: { idBuyer: idBuyer },
+						select: "totalPaid",
+					})
+					.select("_id updatedAt");
+
 				months.reverse().forEach((month) => {
 					const res = allOrders.filter((item) => {
-						const orderMonth = new Date(item.createdAt);
-						return formatDate(orderMonth) === month;
+						if (item.idOrder) {
+							const orderMonth = new Date(item.updatedAt);
+							return formatDate(orderMonth) === month;
+						}
 					});
-					const RevenueInMonth = res.reduce((total, item) => total + item.totalPaid, 0);
+					const RevenueInMonth = res.reduce((total, item) => total + item.idOrder.totalPaid, 0);
+
 					totalPaidChart[month] = RevenueInMonth;
 				});
 			}
@@ -781,4 +1051,6 @@ module.exports = {
 	analyticTotalPaid,
 	analyticCategorySeller,
 	analyticCategoryRevenueSeller,
+	analyticCategoryBuyer,
+	analyticCategoryRevenueBuyer,
 };

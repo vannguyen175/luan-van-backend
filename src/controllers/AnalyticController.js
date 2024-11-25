@@ -70,7 +70,8 @@ const analyticOrderAdmin = async (req, res) => {
 };
 const analyticCategoryAdmin = async (req, res) => {
 	try {
-		const response = await AnalyticService.analyticCategoryAdmin();
+		const { typeDate, startDay, endDay } = req.body;
+		const response = await AnalyticService.analyticCategoryAdmin(typeDate, startDay, endDay);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
@@ -91,6 +92,27 @@ const analyticCategoryRevenueSeller = async (req, res) => {
 	try {
 		const { idUser, typeDate, startDay, endDay } = req.body;
 		const response = await AnalyticService.analyticCategoryRevenueSeller(idUser, typeDate, startDay, endDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+
+const analyticCategoryBuyer = async (req, res) => {
+	try {
+		const { idUser, typeDate, startDay, endDay } = req.body;
+		const response = await AnalyticService.analyticCategoryBuyer(idUser, typeDate, startDay, endDay);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log(error);
+		return res.status(404).json({ message: error });
+	}
+};
+const analyticCategoryRevenueBuyer = async (req, res) => {
+	try {
+		const { idUser, typeDate, startDay, endDay } = req.body;
+		const response = await AnalyticService.analyticCategoryRevenueBuyer(idUser, typeDate, startDay, endDay);
 		return res.status(200).json(response);
 	} catch (error) {
 		console.log(error);
@@ -142,4 +164,6 @@ module.exports = {
 	analyticTotalPaid,
 	analyticCategorySeller,
 	analyticCategoryRevenueSeller,
+	analyticCategoryBuyer,
+	analyticCategoryRevenueBuyer,
 };
