@@ -42,7 +42,7 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 				//bán thành công => cập nhật (trừ) số lượng sản phẩm + trạng thái của sản phẩm
 				if (createDetailOrder) {
 					//nếu tạo đơn hàng thành công
-					
+
 					const productStored = await Product.findOneAndUpdate(
 						{
 							_id: products[index].idProduct,
@@ -50,7 +50,7 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 						},
 						{
 							$inc: { quantityState: -products[index].quantity }, // Trừ số lượng
-							...(productStored.quantityState === products[index].quantity && { stateProduct: "selled" }),
+							...(createDetailOrder.quantityState === products[index].quantity && { stateProduct: "selled" }),
 						},
 						{ new: true }
 					);
