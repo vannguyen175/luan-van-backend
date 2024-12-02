@@ -61,7 +61,6 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 							message: "Đã xảy ra lỗi. Không đủ số lượng sản phẩm trong kho.",
 						});
 					}
-
 					//cập nhật số lượng SP bán thành công trong Seller modal
 					await Seller.findOneAndUpdate(
 						{ _id: createDetailOrder.idSeller },
@@ -72,9 +71,10 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 						},
 						{ new: true }
 					);
+
+					//xóa sản phẩm trong giỏ hàng
+					await CartService.deleteCart(idBuyer, products[index].idProduct);
 				}
-				//xóa sản phẩm trong giỏ hàng
-				await CartService.deleteCart(idBuyer, products[index].idProduct);
 			}
 			return resolve({
 				status: "SUCCESS",
@@ -260,8 +260,8 @@ const updateOrderDetail = (idOrder, data) => {
 				});
 			} else {
 				//đơn hàng đã được người bán chấp nhận => bán thành công
-
 				if (data.status === "1") {
+					//OrderStatus = 1: đang vận chuyển
 					await Seller.findOneAndUpdate(
 						{ idUser: checkOrder.idSeller },
 						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } },

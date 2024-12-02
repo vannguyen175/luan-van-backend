@@ -430,24 +430,11 @@ const getAllSellers = (page, limit) => {
 						},
 					]);
 
-					const revenue = await OrderDetail.aggregate([
-						{
-							$match: { idSeller: new mongoose.Types.ObjectId(seller.idUser._id), status: OrderStatus[3] },
-						},
-						{
-							$group: {
-								_id: "$idSeller",
-								totalRevenue: { $sum: "$productPrice" },
-							},
-						},
-					]);
-
 					// Gộp thông tin seller và rating lại
 					return {
 						...seller.toObject(), // Chuyển seller từ mongoose document sang plain object
 						averageRating: avgRating.length > 0 ? avgRating[0].averageRating : null, // Nếu không có rating nào thì giá trị là null
 						totalReviews: avgRating.length > 0 ? avgRating[0].totalReviews : 0,
-						totalRevenue: revenue.length > 0 ? revenue[0].totalRevenue : 0,
 					};
 				})
 			);
@@ -469,12 +456,7 @@ const getAllSellers = (page, limit) => {
 const sellerDetail = (idSeller) => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			const sellers = await Seller.findOne({ idUser: idSeller }).populate({
-				path: "idUser",
-				select: "name email avatar blockExpireDate blockReason",
-			});
-			const address = await Address.findOne({ user: idSeller });
-
+			const sellers = await Seller.findOne({ idUser: idSeller });
 			const avgRating = await Rating.aggregate([
 				{
 					$match: { idSeller: new mongoose.Types.ObjectId(idSeller) },
@@ -487,27 +469,13 @@ const sellerDetail = (idSeller) => {
 					},
 				},
 			]);
-			const revenue = await OrderDetail.aggregate([
-				{
-					$match: { idSeller: new mongoose.Types.ObjectId(idSeller), status: OrderStatus[3] },
-				},
-				{
-					$group: {
-						_id: "$idSeller",
-						totalRevenue: { $sum: "$productPrice" },
-					},
-				},
-			]);
-
 			resolve({
 				status: "SUCCESS",
 				message: "SUCCESS",
 				data: {
 					sellers,
-					address,
 					averageRating: avgRating[0]?.averageRating || null,
 					totalReviews: avgRating[0]?.totalReviews || 0,
-					totalRevenue: revenue[0]?.totalRevenue || 0,
 				},
 			});
 		} catch (error) {
@@ -551,7 +519,10 @@ const infoUser = (userID) => {
 			}
 
 			const address = await Address.findOne({ user: userID });
-			const seller = await Seller.findOne({ idUser: userID });
+			const seller = await Seller.findOne({ idUser: userID }).populate({
+				path: "idUser",
+				select: "name avatar blockExpireDate blockReason",
+			});
 
 			const rating = await Rating.find({ idSeller: userID })
 				.select("score review")

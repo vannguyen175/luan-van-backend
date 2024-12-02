@@ -20,8 +20,6 @@ const createRating = (review, score, idOrder, idProduct, idBuyer) => {
 				path: "idProduct",
 				select: "images",
 			});
-			console.log(idOrder, isExistProduct);
-
 			const isExistBuyer = await Order.findOne({ idBuyer: idBuyer, _id: isExistProduct?.idOrder });
 			if (isExistProduct && isExistBuyer) {
 				const createResult = await Rating.create({

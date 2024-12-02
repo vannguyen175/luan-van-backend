@@ -70,10 +70,10 @@ const deleteProduct = (req, res) => {
 
 const getAllProducts = async (req, res) => {
 	try {
-		const { state, cate, subCate, sort, seller, province, price, isUsed } = req.body.data;
+		const { state, cate, subCate, sort, seller, province, price, isUsed, isBlocked } = req.body.data;
 		const page = req.query.page || 1;
-		const limit = req.query.limit || 5;
-		const response = await ProductService.getAllProducts(state, cate, subCate, page, limit, sort, seller, province, price, isUsed);
+		const limit = req.query.limit || 10;
+		const response = await ProductService.getAllProducts(state, cate, subCate, page, limit, sort, seller, province, price, isUsed, isBlocked);
 		return res.status(200).json(response);
 	} catch (error) {
 		return res.status(404).json({ message: error });

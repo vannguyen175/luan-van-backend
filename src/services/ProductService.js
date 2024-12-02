@@ -43,6 +43,17 @@ const createProduct = async (newProduct) => {
 					statePost: "waiting",
 				});
 
+				//cập nhật số lượng SP  trong Seller modal
+				await Seller.findOneAndUpdate(
+					{ _id: newProduct.idUser },
+					{
+						$inc: {
+							totalProduct: 1,
+						},
+					},
+					{ new: true }
+				);
+
 				resolve({
 					status: "SUCCESS",
 					message: "Tạo bài đăng thành công",
@@ -134,14 +145,14 @@ const deleteProduct = () => {
 };
 
 //lấy tất cả sản phẩm (luôn lấy mới nhất)
-const getAllProducts = (state, cate, subCate, page, limit, sort, seller, province, price, isUsed) => {
+const getAllProducts = (state, cate, subCate, page, limit, sort, seller, province, price, isUsed, isBlocked) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const perPage = limit; //Số items trên 1 page
 			let query = {};
 			let sortOption = {};
 
-			if (state.length > 0) {
+			if (state?.length > 0) {
 				query.statePost = { $in: state };
 			}
 
@@ -182,7 +193,7 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller, provinc
 			}
 
 			//có lọc subCate hoặc Cate (có phân trang)
-			if (subCate.length > 0 || cate.length > 0) {
+			if (subCate?.length > 0 || cate?.length > 0) {
 				let products = await Product.find(query)
 					.sort(sortOption || { _id: -1 }) //lấy dữ liệu mới nhất
 					.populate({
@@ -214,30 +225,50 @@ const getAllProducts = (state, cate, subCate, page, limit, sort, seller, provinc
 			} else {
 				//lấy tất cả dữ liệu (có phân trang)
 				const totalPages = await Product.countDocuments(query);
-				let products = await Product.find(query)
-					.sort({ _id: -1 }) //lấy dữ liệu mới nhất
-					.skip(perPage * (page - 1)) // Bỏ qua các bản ghi của các trang trước
-					.limit(perPage)
-					.populate({
-						path: "subCategory",
-						model: "Sub_category",
-						foreignField: "slug",
-						populate: {
-							path: "category",
-							model: "Category",
+				let products = {};
+				if (isBlocked) {
+					products = await Product.find(query)
+						.sort({ _id: -1 }) //lấy dữ liệu mới nhất
+						.populate({
+							path: "subCategory",
+							model: "Sub_category",
 							foreignField: "slug",
-						},
-					})
-					.populate({
-						path: "idUser", //idSeller
-						select: "name",
-						match: { $or: [{ blockExpireDate: { $lte: new Date() } }, { blockExpireDate: null }] }, // chỉ lấy người bán không bị khóa
-					});
-				products = products.filter((product) => product.idUser);
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						})
+						.populate({
+							path: "idUser", //idSeller
+							select: "name",
+						});
+				} else {
+					products = await Product.find(query)
+						.sort({ _id: -1 }) //lấy dữ liệu mới nhất
+						.populate({
+							path: "subCategory",
+							model: "Sub_category",
+							foreignField: "slug",
+							populate: {
+								path: "category",
+								model: "Category",
+								foreignField: "slug",
+							},
+						})
+						.populate({
+							path: "idUser", //idSeller
+							select: "name",
+							match: { $or: [{ blockExpireDate: { $lte: new Date() } }, { blockExpireDate: null }] }, // chỉ lấy người bán không bị khóa
+						});
+				}
+
+				products = products.filter((product) => product.subCategory && product.subCategory.category && product.idUser);
+				const paginatedProducts = products.slice((page - 1) * perPage, page * perPage);
 				resolve({
 					status: "OK",
 					message: "Lấy tất cả sản phẩm thành công!",
-					data: products,
+					data: paginatedProducts,
 					totalData: totalPages,
 				});
 			}
