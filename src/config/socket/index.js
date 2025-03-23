@@ -45,7 +45,7 @@ const onConnection = (socket) => {
 		addNewUser(idUser, socket.id);
 	}
 	console.log("onlineUsers", onlineUsers.length);
-	0;
+
 	//gửi socket đển người nhận
 	io.to(socket.id).emit("sendID", socket.id);
 
@@ -58,6 +58,8 @@ const onConnection = (socket) => {
 		addChat(data);
 		//gửi socket đển người nhận
 		if (receiverUser && receiverUser.socketId) {
+			console.log("sended");
+
 			io.to(receiverUser.socketId).emit("sendMessageServer", { data });
 		}
 	});

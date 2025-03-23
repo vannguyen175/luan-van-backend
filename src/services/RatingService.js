@@ -3,6 +3,8 @@ const { OrderDetail } = require("../models/OrderDetailModel");
 const Rating = require("../models/RatingModel");
 const NotificationService = require("../services/NotificationService");
 
+const mongoose = require("mongoose");
+
 let io; //biến io đã khởi tạo ở socket.js
 let getUserSocketId; //hàm lấy socket userID
 
@@ -94,9 +96,63 @@ const updateRating = (idRating, review, score) => {
 		}
 	});
 };
+const getRatingSeller = (idSeller) => {
+	return new Promise(async (resolve, reject) => {
+		try {
+			const rating = await Rating.find({ idSeller: idSeller })
+				.select("score review")
+				.populate({
+					path: "idProduct",
+					select: "images name _id",
+				})
+				.populate({
+					path: "idBuyer",
+					select: "name avatar blockExpireDate blockReason",
+				});
+
+			const ratingCounts = {
+				1: 0,
+				2: 0,
+				3: 0,
+				4: 0,
+				5: 0,
+			};
+
+			rating.forEach((r) => {
+				const score = Math.round(r.score);
+				if (score >= 1 && score <= 5) {
+					ratingCounts[score] += 1;
+				}
+			});
+
+			const avgRating = await Rating.aggregate([
+				{
+					$match: { idSeller: new mongoose.Types.ObjectId(idSeller) },
+				},
+				{
+					$group: {
+						_id: "$idSeller", // Nhóm theo idSeller
+						averageRating: { $avg: "$score" }, // Tính trung bình của trường score
+						totalReviews: { $sum: 1 }, // Đếm tổng số đánh giá
+					},
+				},
+			]);
+			resolve({
+				status: "SUCCESS",
+				message: "Cập nhật đánh giá thành công",
+				data: rating,
+				ratingCounts: ratingCounts,
+				avgRating: avgRating,
+			});
+		} catch (error) {
+			reject(error);
+		}
+	});
+};
 
 module.exports = {
 	socket,
 	createRating,
 	updateRating,
+	getRatingSeller,
 };

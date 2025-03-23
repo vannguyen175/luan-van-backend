@@ -40,19 +40,9 @@ const createProduct = async (newProduct) => {
 					stateProduct: newProduct?.stateProduct,
 					quantity: newProduct.quantity,
 					quantityState: newProduct.quantity,
+					description: newProduct.description,
 					statePost: "waiting",
 				});
-
-				//cập nhật số lượng SP  trong Seller modal
-				await Seller.findOneAndUpdate(
-					{ _id: newProduct.idUser },
-					{
-						$inc: {
-							totalProduct: 1,
-						},
-					},
-					{ new: true }
-				);
 
 				resolve({
 					status: "SUCCESS",
@@ -105,21 +95,22 @@ const updateProduct = (productID, data) => {
 						await Seller.create({ idUser: updateProduct.idUser, totalProduct: 1 });
 					}
 				}
-
-				const userSocket = getUserSocketId(updateProduct.idUser);
-				const addNoti = await NotificationService.addNotification({
-					user: updateProduct.idUser,
-					info: {
-						product: updateProduct._id,
-						image: updateProduct.images[0],
-						navigate: "product",
-						message: "Bài đăng của bạn đã được cập nhật.",
-					},
-				});
-				if (userSocket) {
-					io.to(userSocket.socketId).emit("getNotification", {
-						unseenCount: addNoti.unseenCount,
+				if (data.status === "closed") {
+					const userSocket = getUserSocketId(updateProduct.idUser);
+					const addNoti = await NotificationService.addNotification({
+						user: updateProduct.idUser,
+						info: {
+							product: updateProduct._id,
+							image: updateProduct.images[0],
+							navigate: "product",
+							message: "Bài đăng của bạn đã được cập nhật.",
+						},
 					});
+					if (userSocket) {
+						io.to(userSocket.socketId).emit("getNotification", {
+							unseenCount: addNoti.unseenCount,
+						});
+					}
 				}
 
 				return resolve({

@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const genneralAccessToken = async (payload) => {
-	const access_token = jwt.sign({ ...payload }, "access_token", { expiresIn: "1m" });
+	const access_token = jwt.sign({ ...payload }, "access_token", { expiresIn: "30m" });
 	return access_token;
 };
 
@@ -14,14 +14,14 @@ const genneralRefreshToken = async (payload) => {
 
 const refreshTokenService = async (token) => {
 	return new Promise(async (resolve, reject) => {
-		try {			
+		try {
 			jwt.verify(token, "refresh_token", async (error, user) => {
 				if (error) {
 					resolve({
 						status: "ERROR",
 						message: "The authemtication",
 					});
-				}								
+				}
 				const access_token = await genneralAccessToken({
 					id: user?.id,
 					isAdmin: user?.isAdmin,

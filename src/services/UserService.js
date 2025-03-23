@@ -510,6 +510,8 @@ const detailUser = (userID) => {
 const infoUser = (userID) => {
 	return new Promise(async (resolve, reject) => {
 		try {
+			console.log("user", userID);
+
 			const result = await User.findById(userID);
 			if (result === null) {
 				resolve({

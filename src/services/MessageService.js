@@ -74,11 +74,9 @@ const getChatUnseen = async (idUser) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const chats = await Message.find({ members: idUser, isSeen: false });
-
 			//result: mảng chứa các id của users đang chat với idUser
 			const result = chats.map((chat) => chat.members.filter((member) => !member.equals(new mongoose.Types.ObjectId(idUser))));
-
-			if (chats) {
+			if (chats[0]?.isSeen) {
 				resolve({
 					status: "SUCCESS",
 					message: "Lấy tất cả cuộc hội thoại chưa được xem.",

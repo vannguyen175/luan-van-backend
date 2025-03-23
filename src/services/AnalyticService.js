@@ -28,9 +28,10 @@ const analyticProduct = (idUser, typeDate, startDay, endDay) => {
 			let totalRejected = null;
 			let allProducts = {};
 
-			totalPosted = await Product.find({ idUser: idUser, statePost: { $in: ["approved", "selled"] } });
+			totalPosted = await Product.find({ idUser: idUser, statePost: { $in: ["approved"] } });
+
 			totalSelled = await OrderDetail.find({ idSeller: idUser, status: "Đã giao" }); //lượt bán thành công
-			totalRejected = await Product.find({ idUser: idUser, statePost: { $in: ["rejected"] } });
+			totalRejected = await Product.find({ idUser: idUser, statePost: { $in: ["waiting"] } });
 
 			if (typeDate === "week") {
 				//hiển thị sản phẩm theo các ngày trong 1 tuần
@@ -110,17 +111,22 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 				rejected: rejectedOrders.length,
 			};
 			totalRevenue = await OrderDetail.aggregate([
-				{ $match: { idSeller: new ObjectId(idSeller), status: OrderStatus[3] } },
+				{
+					$match: {
+						idSeller: new ObjectId(idSeller),
+						status: OrderStatus[3],
+					},
+				},
 				{
 					$group: {
-						_id: null,
-						totalRevenue: { $sum: "$productPrice" },
+						_id: null, // Không nhóm theo bất kỳ trường nào
+						totalRevenue: { $sum: { $multiply: ["$productPrice", "$quantity"] } }, // Tính tổng (giá x số lượng)
 					},
 				},
 			]);
+
 			if (typeDate === "week") {
 				//hiển thị đơn hàng theo các ngày trong 1 tuần
-
 				const startOfWeek = new Date(startDay);
 				const endDay = new Date(startOfWeek);
 				endDay.setDate(startOfWeek.getDate() + 6);
@@ -131,14 +137,16 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 					idSeller: idSeller,
 					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
 					status: OrderStatus[3],
-				}).select("updatedAt productPrice");
+				}).select("updatedAt productPrice quantity");
 
-				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
+				console.log(allOrders);
+
+				for (let date = new Date(startOfWeek); date <= new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
 						const orderCheck = new Date(item.updatedAt);
 						return orderCheck.toDateString() === date.toDateString();
 					});
-					const totalRevenueForDay = res.reduce((total, item) => total + item.productPrice, 0);
+					const totalRevenueForDay = res.reduce((total, item) => total + item.productPrice * item.quantity, 0);
 					totalRevenueChart[format("dd/MM/yyyy", date)] = totalRevenueForDay;
 				}
 			} else if (typeDate === "month") {
@@ -154,7 +162,8 @@ const analyticOrder = (idSeller, typeDate, startDay) => {
 					months.push(monthString);
 				}
 				//doanh thu đơn hàng
-				allOrders = await OrderDetail.find({ idSeller: idSeller }).select("updatedAt productPrice");
+				allOrders = await OrderDetail.find({ idSeller: idSeller, status: "Đã giao" }).select("updatedAt productPrice");
+
 				months.reverse().forEach((month) => {
 					const res = allOrders.filter((item) => {
 						const orderMonth = new Date(item.updatedAt);
@@ -275,11 +284,15 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 				rejected: rejectedOrders.length,
 			};
 			totalRevenue = await OrderDetail.aggregate([
-				{ $match: { status: OrderStatus[3] } },
+				{
+					$match: {
+						status: OrderStatus[3],
+					},
+				},
 				{
 					$group: {
-						_id: null,
-						totalRevenue: { $sum: "$productPrice" },
+						_id: null, // Không nhóm theo bất kỳ trường nào
+						totalRevenue: { $sum: { $multiply: ["$productPrice", "$quantity"] } }, // Tính tổng (giá x số lượng)
 					},
 				},
 			]);
@@ -292,12 +305,12 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 				const endOfWeek = new Date(endDay.setHours(23, 59, 59, 999));
 
 				//doanh thu đơn hàng
-				allOrders = await OrderDetail.find({ createdAt: { $gte: startOfWeek, $lt: endOfWeek }, status: OrderStatus[3] }).select(
-					"productPrice createdAt status"
+				allOrders = await OrderDetail.find({ updatedAt: { $gte: startOfWeek, $lt: endOfWeek }, status: OrderStatus[3] }).select(
+					"productPrice updatedAt status"
 				);
 				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
-						const orderCheck = new Date(item.createdAt);
+						const orderCheck = new Date(item.updatedAt);
 						return orderCheck.toDateString() === date.toDateString();
 					});
 					const totalRevenueForDay = res.reduce((total, item) => total + item.productPrice, 0);
@@ -316,10 +329,10 @@ const analyticOrderAdmin = (typeDate, startDay) => {
 					months.push(monthString);
 				}
 				//doanh thu đơn hàng
-				allOrders = await OrderDetail.find({ status: OrderStatus[3] }).select("productPrice createdAt");
+				allOrders = await OrderDetail.find({ status: OrderStatus[3] }).select("productPrice updatedAt");
 				months.reverse().forEach((month) => {
 					const res = allOrders.filter((item) => {
-						const orderMonth = new Date(item.createdAt);
+						const orderMonth = new Date(item.updatedAt);
 						return formatDate(orderMonth) === month;
 					});
 					const RevenueInMonth = res.reduce((total, item) => total + item.productPrice, 0);
@@ -347,8 +360,6 @@ const analyticCategoryAdmin = (typeDate, startDay, endDay) => {
 		try {
 			let dataChart = {};
 			let dataChartDetail = {};
-			console.log("typeDate", typeDate);
-
 			if (typeDate === "all") {
 				let allOrders = await OrderDetail.find({
 					status: OrderStatus[3],
@@ -392,9 +403,12 @@ const analyticCategoryAdmin = (typeDate, startDay, endDay) => {
 					}
 				});
 			} else {
+				const end = new Date(endDay); // Ngày kết thúc
+				// Đặt end thành cuối ngày
+				end.setHours(23, 59, 59, 999);
 				let allOrders = await OrderDetail.find({
 					status: OrderStatus[3],
-					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(end) },
 				})
 					.select("_id productPrice")
 					.populate({
@@ -460,7 +474,7 @@ const analyticCategorySeller = (idUser, typeDate, startDay, endDay) => {
 			if (typeDate === "all") {
 				const allProducts = await OrderDetail.find({
 					idSeller: idUser,
-					status: "Đã giao",
+					status: OrderStatus[3],
 				})
 					.select("_id")
 					.populate({
@@ -479,8 +493,8 @@ const analyticCategorySeller = (idUser, typeDate, startDay, endDay) => {
 					});
 
 				allProducts.forEach((product) => {
-					const categoryName = product.idProduct.subCategory?.category?.name;
-					const subCateName = product.idProduct.subCategory?.name;
+					const categoryName = product.idProduct?.subCategory?.category?.name;
+					const subCateName = product.idProduct?.subCategory?.name;
 
 					if (categoryName && subCateName) {
 						if (!dataChartDetail[categoryName]) {
@@ -491,10 +505,13 @@ const analyticCategorySeller = (idUser, typeDate, startDay, endDay) => {
 					}
 				});
 			} else {
+				const end = new Date(endDay); // Ngày kết thúc
+				// Đặt end thành cuối ngày
+				end.setHours(23, 59, 59, 999);
 				const allProducts = await OrderDetail.find({
 					idSeller: idUser,
 					status: "Đã giao",
-					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(end) },
 				})
 					.select("_id")
 					.populate({
@@ -582,10 +599,13 @@ const analyticCategoryRevenueSeller = (idUser, typeDate, startDay, endDay) => {
 					}
 				});
 			} else {
+				const end = new Date(endDay); // Ngày kết thúc
+				// Đặt end thành cuối ngày
+				end.setHours(23, 59, 59, 999);
 				const allProducts = await OrderDetail.find({
 					idSeller: idUser,
 					status: "Đã giao",
-					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(end) },
 				})
 					.select("_id quantity productPrice")
 					.populate({
@@ -681,9 +701,13 @@ const analyticCategoryBuyer = (idUser, typeDate, startDay, endDay) => {
 					}
 				});
 			} else {
+				const end = new Date(endDay); // Ngày kết thúc
+				// Đặt end thành cuối ngày
+				end.setHours(23, 59, 59, 999);
+
 				const allProducts = await OrderDetail.find({
 					status: OrderStatus[3],
-					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(end) + 1 },
 				})
 					.select("_id")
 					.populate({
@@ -707,6 +731,7 @@ const analyticCategoryBuyer = (idUser, typeDate, startDay, endDay) => {
 					});
 
 				allProducts.forEach((product) => {
+					console.log("product.idOrder", product.idOrder);
 					if (product.idOrder) {
 						const categoryName = product.idProduct.subCategory?.category?.name;
 						const subCateName = product.idProduct.subCategory?.name;
@@ -782,9 +807,12 @@ const analyticCategoryRevenueBuyer = (idUser, typeDate, startDay, endDay) => {
 					}
 				});
 			} else {
+				const end = new Date(endDay); // Ngày kết thúc
+				// Đặt end thành cuối ngày
+				end.setHours(23, 59, 59, 999);
 				const allProducts = await OrderDetail.find({
 					status: OrderStatus[3],
-					updatedAt: { $gte: new Date(startDay), $lte: new Date(endDay) },
+					updatedAt: { $gte: new Date(startDay), $lte: new Date(end) },
 				})
 					.select("_id")
 					.populate({
@@ -859,7 +887,7 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 
 			//số lượng SP đang chờ xử lý
 			const productWaiting = await OrderDetail.find({
-				status: { $nin: [OrderStatus[3], OrderStatus[4]] },
+				status: OrderStatus[0],
 			}).populate({
 				path: "idOrder",
 				match: { idBuyer: idUser },
@@ -898,7 +926,7 @@ const analyticProductBuyer = (idUser, typeDate, startDay) => {
 
 				//sản phẩm đã mua
 				const data = await OrderDetail.find({
-					updatedAt: { $gte: startOfWeek, $lt: endOfWeek },
+					updatedAt: { $gte: startOfWeek, $lte: endOfWeek },
 					status: OrderStatus[3],
 				}).populate({
 					path: "idOrder",
@@ -984,7 +1012,7 @@ const analyticTotalPaid = (idBuyer, typeDate, startDay) => {
 					})
 					.select("_id updatedAt");
 
-				for (let date = new Date(startOfWeek); date < new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
+				for (let date = new Date(startOfWeek); date <= new Date(endOfWeek); date.setDate(date.getDate() + 1)) {
 					const res = allOrders.filter((item) => {
 						if (item.idOrder) {
 							const orderCheck = new Date(item.updatedAt);

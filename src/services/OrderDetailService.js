@@ -37,12 +37,12 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 					shippingPrice: products[index].shippingPrice,
 					isPaid: paymentMethod === "vnpay",
 					note: products[index]?.note,
-					quantityState: products[index].quantity,
 				});
 				//bán thành công => cập nhật (trừ) số lượng sản phẩm + trạng thái của sản phẩm
 				if (createDetailOrder) {
 					//nếu tạo đơn hàng thành công
-
+					console.log("products[index].quantityState", products[index]);
+					const productCheck = await Product.findById(products[index].idProduct);
 					const productStored = await Product.findOneAndUpdate(
 						{
 							_id: products[index].idProduct,
@@ -50,7 +50,7 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 						},
 						{
 							$inc: { quantityState: -products[index].quantity }, // Trừ số lượng
-							...(createDetailOrder.quantityState === products[index].quantity && { stateProduct: "selled" }),
+							...(products[index].quantity === productCheck.quantityState && { stateProduct: "selled" }),
 						},
 						{ new: true }
 					);
@@ -61,16 +61,6 @@ const createOrderDetail = (products, idOrder, paymentMethod, idBuyer) => {
 							message: "Đã xảy ra lỗi. Không đủ số lượng sản phẩm trong kho.",
 						});
 					}
-					//cập nhật số lượng SP bán thành công trong Seller modal
-					await Seller.findOneAndUpdate(
-						{ _id: createDetailOrder.idSeller },
-						{
-							$inc: {
-								totalSold: 1,
-							},
-						},
-						{ new: true }
-					);
 
 					//xóa sản phẩm trong giỏ hàng
 					await CartService.deleteCart(idBuyer, products[index].idProduct);
@@ -91,19 +81,19 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 		try {
 			const perPage = limit; //Số items trên 1 page
 
-			//kiểm tra + cập nhật trạng thái 5 phút của state "đang vận chuyển" và "đang giao hàng"
+			//kiểm tra + cập nhật trạng thái 5 giây của state "đang vận chuyển" và "đang giao hàng"
 			const now = new Date();
-			const fiveMinutesAgo = new Date(now - 1 * 60000);
+			const fiveSecondsAgo = new Date(now - 5 * 1000);
 
 			// Cập nhật trạng thái từ "Đang vận chuyển" sang "Giao hàng"
 			await OrderDetail.updateMany(
-				{ status: "Đang vận chuyển", updatedAt: { $lt: fiveMinutesAgo } },
+				{ status: "Đang vận chuyển", updatedAt: { $lt: fiveSecondsAgo } },
 				{ $set: { status: "Giao hàng", updatedAt: now } }
 			);
 
 			// Cập nhật trạng thái từ "Giao hàng" sang "Đã giao"
 			await OrderDetail.updateMany(
-				{ status: "Giao hàng", updatedAt: { $lt: fiveMinutesAgo } },
+				{ status: "Giao hàng", updatedAt: { $lt: fiveSecondsAgo } },
 				{ $set: { status: "Đã giao", updatedAt: now } }
 			);
 
@@ -161,6 +151,10 @@ const getOrdersDetail = (seller, buyer, status, page, limit) => {
 						},
 					})
 					.populate({
+						path: "idOrder",
+						select: "paymentMethod shippingDetail",
+					})
+					.populate({
 						path: "idSeller",
 						select: "name",
 					});
@@ -198,41 +192,37 @@ const searchOrderDetail = (query, idSeller, status) => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			// Tạo điều kiện tìm kiếm
-			let searchQuery = {
-				$or: [
-					{ orderId: query }, // Tìm theo mã đơn hàng
-					{ "buyer.name": { $regex: query, $options: "i" } }, // Tìm theo tên khách hàng
-					{ "product.name": { $regex: query, $options: "i" } }, // Tìm theo tên sản phẩm
-				],
-			};
 			//tìm tất cả SP thuộc cùng 1 người bán (idSeller) + tên SP
-			let orders = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] }, searchQuery)
-				.populate({
-					path: "idProduct",
-					//	match: { name: { $regex: productName, $options: "i" } },
-					select: "images name sellerName",
-					populate: {
-						path: "subCategory",
-						model: "Sub_category",
-						foreignField: "slug",
-						select: "name",
-					},
-				})
-				.populate({
-					path: "idOrder",
-					select: "shippingDetail idBuyer paymentMethod",
-					populate: {
-						path: "idBuyer",
-						//	match: { name: { $regex: buyerName, $options: "i" } },
-						select: "name",
-					},
-				});
-			//lọc những orders có trùng tên sp hoặc tên buyer với từ khóa tìm kiếm (ko trùng thì có giá trị null)
-			orders = orders.filter((ord) => ord.idProduct || ord.idOrder.idBuyer);
+			let resultSearch = {};
+			var ObjectId = require("mongoose").Types.ObjectId;
+			const checkIsID = ObjectId.isValid(query); //kiểm tra tìm kiếm là id đơn hàng hay tên sp
+			if (checkIsID) {
+				resultSearch = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status], _id: query })
+					.populate({
+						path: "idProduct",
+						select: "images name sellerName",
+					})
+					.populate({
+						path: "idOrder",
+						select: "shippingDetail idBuyer paymentMethod",
+					});
+			} else {
+				resultSearch = await OrderDetail.find({ idSeller: idSeller, status: OrderStatus[status] })
+					.populate({
+						path: "idProduct",
+						match: { name: { $regex: query, $options: "i" } },
+						select: "images name sellerName",
+					})
+					.populate({
+						path: "idOrder",
+						select: "shippingDetail idBuyer paymentMethod",
+					});
+				resultSearch = resultSearch.filter((ord) => ord.idProduct);
+			}
 			resolve({
 				status: "SUCCESS",
-				message: "Lấy đơn hàng thành công!",
-				data: orders,
+				message: "Tìm kiếm thành công!",
+				data: resultSearch,
 			});
 		} catch (error) {
 			reject(error);
@@ -247,7 +237,7 @@ const updateOrderDetail = (idOrder, data) => {
 			const checkOrder = await OrderDetail.findById({ _id: idOrder })
 				.populate({
 					path: "idProduct",
-					select: "images name",
+					select: "_id images name",
 				})
 				.populate({
 					path: "idOrder",
@@ -267,13 +257,6 @@ const updateOrderDetail = (idOrder, data) => {
 						{ $inc: { totalSold: 1, revenue: checkOrder.productPrice * checkOrder.quantity } },
 						{ new: true }
 					); //tăng totalSelled thêm 1
-					await Product.findByIdAndUpdate(
-						checkOrder.idProduct,
-						{
-							$inc: { quantity: -checkOrder.quantity }, // Trừ dần số lượng từ quantity
-						},
-						{ new: true }
-					);
 				}
 				let status = checkOrder.status;
 				if (data.status) {
@@ -296,6 +279,11 @@ const updateOrderDetail = (idOrder, data) => {
 							new: true,
 						}
 					);
+				}
+
+				const getProduct = await Product.findById(checkOrder.idProduct._id);
+				if (getProduct.quantityState === 0) {
+					await Product.findByIdAndUpdate(getProduct._id, { statePost: "selled" }, { new: true });
 				}
 
 				const userSocket = getUserSocketId(checkOrder.idOrder.idBuyer);
@@ -341,7 +329,10 @@ const cancelOrder = (reason, idOrder) => {
 					message: "Đơn hàng không tồn tại",
 				});
 			} else {
-				await Product.findByIdAndUpdate({ _id: checkOrder.idProduct._id }, { statePost: "approved", $inc: { quantity: -1 } });
+				await Product.findByIdAndUpdate(
+					{ _id: checkOrder.idProduct._id },
+					{ statePost: "approved", $inc: { quantityState: checkOrder.quantity } }
+				);
 				const updateOrder = await OrderDetail.findByIdAndUpdate(
 					idOrder,
 					{

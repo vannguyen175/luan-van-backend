@@ -34,8 +34,26 @@ const updateRating = async (req, res) => {
 		return res.status(404).json({ message: error });
 	}
 };
+//url: /sub-category/update
+const getRatingSeller = async (req, res) => {
+	try {
+		const idSeller = req.params.id;
+		if (!idSeller) {
+			return res.status(200).json({
+				status: "ERROR",
+				message: "Thiếu ID người bán",
+			});
+		}
+		const response = await RatingService.getRatingSeller(idSeller);
+		return res.status(200).json(response);
+	} catch (error) {
+		console.log("Error at updateRating controller", error);
+		return res.status(404).json({ message: error });
+	}
+};
 
 module.exports = {
 	createRating,
 	updateRating,
+	getRatingSeller,
 };
